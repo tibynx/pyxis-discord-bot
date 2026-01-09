@@ -29,6 +29,7 @@ class DiscordBot(commands.Bot):
         # No prefix since we use app commands
         super().__init__(command_prefix="", intents=intents)
         self.logger = logger
+        self.tree.on_error = self.on_app_command_error
 
     # Load cogs
     async def load_cogs(self) -> None:
@@ -85,7 +86,66 @@ class DiscordBot(commands.Bot):
                 interaction.user, interaction.user.id, command.qualified_name
             )
 
+    # Log app command errors
+    async def on_app_command_error(
+            self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        command_name = interaction.command.name if interaction.command else "Unknown command"
+
+        # Check if interaction was already responded to
+        if interaction.response.is_done():
+            send_msg = interaction.followup.send
+        else:
+            send_msg = interaction.response.send_message
+
+        # Command raised an unexpected error
+        if isinstance(error, app_commands.CommandInvokeError):
+            original = getattr(error, "original", error)
+            # Bot doesn't have permission
+            if isinstance(original, discord.Forbidden):
+                await send_msg(
+                    "I don't have permission to execute this command.",
+                    ephemeral=True
+                )
+            # Network issues or rate limiting
+            elif isinstance(original, discord.HTTPException):
+                self.logger.warning(
+                    "HTTP exception occurred in interaction '%s' for user %s (User ID: %s): %s",
+                    command_name, interaction.user.name, interaction.user.id, original
+                )
+                await send_msg(
+                    "I cannot complete this command because of network issues. "
+                    "I might have been rate limited. Please try again later.",
+                    ephemeral=True
+                )
+            # Handle all other CommandInvokeError cases
+            else:
+                self.logger.error(
+                    "CommandInvokeError occurred in interaction '%s' by user %s (User ID: %s): %r",
+                    command_name, interaction.user.name, interaction.user.id,
+                    original, exc_info=(type(original), original, original.__traceback__)
+                )
+                await send_msg(
+                    "An error occurred while executing the command.",
+                    ephemeral=True
+                )
+            return
+        # Other errors
+        else:
+            self.logger.error(
+                "Unhandled app command error in interaction '%s' by user %s (User ID: %s): %r",
+                command_name, interaction.user.name, interaction.user.id,
+                error, exc_info=(type(error), error, error.__traceback__)
+            )
+            await send_msg(
+                f"An unexpected error occurred while executing the command.",
+                ephemeral=True
+            )
+
 
 # Run the bot
 bot = DiscordBot()
+
+if not BOT_TOKEN:
+    raise ValueError("Discord bot token was not found in environment variables!")
 bot.run(BOT_TOKEN)
