@@ -25,6 +25,8 @@ Pyxis is a Discord bot designed to invite users to other servers. It's built usi
 - Follow PEP 8 style guidelines
 - Use async/await for all Discord operations
 - Keep code clean and readable with appropriate comments
+- Make simple, minimal docstrings
+- Make sure lines are not longer than 100 chars (pylint)
 
 ### Discord.py Patterns
 - Use `app_commands.command()` decorator for slash commands
@@ -35,7 +37,7 @@ Pyxis is a Discord bot designed to invite users to other servers. It's built usi
 
 ### Error Handling
 - Wrap extension loading in try-except blocks
-- Print informative error messages for debugging
+- Log informative error messages for debugging
 - Handle command sync failures gracefully
 
 ## Configuration
