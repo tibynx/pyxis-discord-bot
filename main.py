@@ -138,7 +138,7 @@ class DiscordBot(commands.Bot):
                 error, exc_info=(type(error), error, error.__traceback__)
             )
             await send_msg(
-                f"An unexpected error occurred while executing the command.",
+                "An unexpected error occurred while executing the command.",
                 ephemeral=True
             )
 
