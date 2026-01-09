@@ -1,6 +1,7 @@
 import logging
 import os
 import discord
+from discord import app_commands
 from discord.ext import commands
 from config import BOT_TOKEN, SYNC_GUILD
 
@@ -67,6 +68,22 @@ class DiscordBot(commands.Bot):
         except Exception as error:
             self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
             self.logger.exception(error)
+
+    # Log app command execution
+    async def on_app_command_completion(
+            self, interaction: discord.Interaction, command: app_commands.Command
+    ) -> None:
+        if interaction.guild is not None:
+            self.logger.info(
+                "User %s (User ID: %s) executed the '%s' interaction in guild '%s' (Guild ID: %s)",
+                interaction.user, interaction.user.id, command.qualified_name,
+                interaction.guild.name, interaction.guild.id
+            )
+        else:
+            self.logger.info(
+                "User %s (User ID: %s) executed the '%s' interaction in DMs",
+                interaction.user, interaction.user.id, command.qualified_name
+            )
 
 
 # Run the bot
