@@ -1,7 +1,7 @@
 # Copilot Instructions for Pyxis
 
 ## Project Overview
-Pyxis is a Discord bot designed to invite users to other servers. It's built using discord.py (v2.6.4+) with a cog-based architecture.
+Pyxis is a Discord bot designed to invite users to other servers. It's built using discord.py (>= 2.6.4) with a cog-based architecture.
 
 ## Architecture & Structure
 
