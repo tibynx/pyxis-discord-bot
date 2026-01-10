@@ -16,7 +16,11 @@ class InviteDialog(discord.ui.LayoutView):
         self.invite_url = invite_url
 
         # Count guild members
-        total_members = len(target_guild.members)
+        total_members = (
+            target_guild.member_count
+            if target_guild.member_count is not None
+            else len(target_guild.members)
+        )
         online_members = len([
             member for member in target_guild.members
             if member.status != discord.Status.offline
