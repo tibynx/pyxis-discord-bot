@@ -1,3 +1,4 @@
+"""Main entry point for the Discord bot."""
 import logging
 import os
 import discord
@@ -25,7 +26,9 @@ logger.addHandler(log_handler)
 
 
 class DiscordBot(commands.Bot):
+    """Discord bot class with cog loading and error handling."""
     def __init__(self) -> None:
+        """Initialize the Discord bot with intents and logging."""
         # No prefix since we use app commands
         super().__init__(command_prefix="", intents=intents)
         self.logger = logger
@@ -33,6 +36,7 @@ class DiscordBot(commands.Bot):
 
     # Load cogs
     async def load_cogs(self) -> None:
+        """Load all cogs from the cogs directory."""
         for file in os.listdir(os.path.join(os.path.realpath(os.path.dirname(__file__)), "cogs")):
             if file.endswith(".py"): # Only load python files
                 extension = file[:-3]
@@ -46,6 +50,7 @@ class DiscordBot(commands.Bot):
                     self.logger.exception(error)
 
     async def setup_hook(self) -> None:
+        """Perform initial setup, including loading cogs and syncing commands."""
         self.logger.info(
             "Logged in as %s#%s (ID: %s)", self.user.name, self.user.discriminator, self.user.id
         )
@@ -74,6 +79,7 @@ class DiscordBot(commands.Bot):
     async def on_app_command_completion(
             self, interaction: discord.Interaction, command: app_commands.Command
     ) -> None:
+        """Log when an app command is successfully executed."""
         if interaction.guild is not None:
             self.logger.info(
                 "User %s (User ID: %s) executed the '%s' interaction in guild '%s' (Guild ID: %s)",
@@ -90,6 +96,7 @@ class DiscordBot(commands.Bot):
     async def on_app_command_error(
             self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
+        """Handle and log app command errors."""
         command_name = interaction.command.name if interaction.command else "Unknown command"
 
         # Check if interaction was already responded to

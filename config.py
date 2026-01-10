@@ -1,3 +1,4 @@
+"""Configuration for the Discord bot."""
 import os
 from dotenv import load_dotenv
 
