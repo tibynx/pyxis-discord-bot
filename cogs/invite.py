@@ -95,11 +95,6 @@ class Invite(commands.Cog):
                 "in the target server.",
                 ephemeral=True
             )
-        except discord.HTTPException as e:
-            await interaction.followup.send(
-                f"Failed to create invite: {e}",
-                ephemeral=True
-            )
 
 
 async def setup(bot):
