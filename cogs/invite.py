@@ -6,6 +6,56 @@ from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL
 
 guild = discord.Object(id=SYNC_GUILD)
 
+# Invite dialog
+class InviteDialog(discord.ui.LayoutView):
+    def __init__(self, interaction: discord.Interaction, target_guild: discord.Guild, invite_url: str):
+        """Initialize the invite dialog view."""
+        super().__init__(timeout=600)
+        self.interaction = interaction
+        self.target_guild = target_guild
+        self.invite_url = invite_url
+
+        # Count guild members
+        total_members = len(target_guild.members)
+        online_members = len([
+            member for member in target_guild.members
+            if member.status != discord.Status.offline
+        ])
+
+        # Get guild description
+        if target_guild.description:
+            guild_description = f"_ _\n{target_guild.description}"
+        else:
+            guild_description = ""
+
+        container = discord.ui.Container()
+        container.add_item(
+            discord.ui.TextDisplay(f"-# You have been invited to join **{target_guild.name}**!")
+        )
+        container.add_item(discord.ui.Separator())
+        section = discord.ui.Section(
+            discord.ui.TextDisplay(
+                f"## {target_guild.name}\n-# 🟢 {online_members} Online    "
+                f"⚪ {total_members} Members\n{guild_description}"
+            ),
+            accessory=discord.ui.Thumbnail(
+                target_guild.icon.url if target_guild.icon else None
+                )
+        )
+        invite_button = discord.ui.ActionRow(discord.ui.Button(
+            label="Join Server", style=discord.ButtonStyle.link, url=invite_url
+        ))
+        container.add_item(section)
+        container.add_item(invite_button)
+        self.add_item(container)
+
+    async def on_timeout(self):
+        """Handle timeout by deleting the dialog message."""
+        try:
+            await self.interaction.delete_original_response()
+        except discord.HTTPException:
+            pass
+
 
 class Invite(commands.Cog):
     """Invite related commands"""
@@ -81,13 +131,8 @@ class Invite(commands.Cog):
             )
 
             # Send the invite as an ephemeral message
-            await interaction.followup.send(
-                f"Here's your personal invite link to **{target_guild.name}**:\n"
-                f"{invite.url}\n\n"
-                f"This link expires in 10 minutes and can only be used once.",
-                ephemeral=True,
-                delete_after=600  # Delete the message after 10 minutes
-            )
+            invite_url = invite.url
+            await interaction.followup.send(view=InviteDialog(interaction, target_guild, invite_url))
 
         except discord.Forbidden:
             await interaction.followup.send(

@@ -8,6 +8,8 @@ from config import BOT_TOKEN, SYNC_GUILD
 
 # Set intents
 intents = discord.Intents.default()
+intents.members = True # Required to access guild.members
+intents.presences = True # Required to access member status
 
 # Set up logging
 logs_dir = os.path.join(os.path.dirname(__file__), "logs")
