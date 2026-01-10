@@ -130,9 +130,7 @@ class Invite(commands.Cog):
                 max_age=600,  # Expires in 10 minutes (600 seconds)
                 max_uses=1,  # One-time use only
                 unique=True,  # Generate a unique invite
-                reason=f"Personal invite for {interaction.user} "
-                       f"(ID: {interaction.user.id})"
-            )
+                reason=f"Invite link for {interaction.user} (User ID: {interaction.user.id})")
 
             # Send the invite as an ephemeral message
             invite_url = invite.url
