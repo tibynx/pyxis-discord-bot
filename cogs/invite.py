@@ -2,7 +2,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL
+from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT
 
 guild = discord.Object(id=SYNC_GUILD)
 
@@ -10,7 +10,7 @@ guild = discord.Object(id=SYNC_GUILD)
 class InviteDialog(discord.ui.LayoutView):
     def __init__(self, interaction: discord.Interaction, target_guild: discord.Guild, invite_url: str):
         """Initialize the invite dialog view."""
-        super().__init__(timeout=600)
+        super().__init__(timeout=INVITE_TIMEOUT)
         self.interaction = interaction
         self.target_guild = target_guild
         self.invite_url = invite_url
@@ -36,7 +36,7 @@ class InviteDialog(discord.ui.LayoutView):
         container.add_item(
             discord.ui.TextDisplay(
                 f"-# You have been invited to join **{target_guild.name}**! "
-                f"This invite expires <t:{int(self.interaction.created_at.timestamp()) + 600}:R>."
+                f"This invite expires <t:{int(self.interaction.created_at.timestamp()) + INVITE_TIMEOUT}:R>."
             )
         )
         container.add_item(discord.ui.Separator())
@@ -130,7 +130,7 @@ class Invite(commands.Cog):
         # Create the invite with specified parameters
         try:
             invite = await invite_channel.create_invite(
-                max_age=600,  # Expires in 10 minutes (600 seconds)
+                max_age=INVITE_TIMEOUT,  # One-time use invite timeout
                 max_uses=1,  # One-time use only
                 unique=True,  # Generate a unique invite
                 reason=f"Invite link for {interaction.user} (User ID: {interaction.user.id})")
