@@ -34,7 +34,10 @@ class InviteDialog(discord.ui.LayoutView):
 
         container = discord.ui.Container()
         container.add_item(
-            discord.ui.TextDisplay(f"-# You have been invited to join **{target_guild.name}**!")
+            discord.ui.TextDisplay(
+                f"-# You have been invited to join **{target_guild.name}**! "
+                f"This invite expires <t:{int(self.interaction.created_at.timestamp()) + 600}:R>."
+            )
         )
         container.add_item(discord.ui.Separator())
         section = discord.ui.Section(
