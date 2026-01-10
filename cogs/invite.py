@@ -10,7 +10,7 @@ guild = discord.Object(id=SYNC_GUILD)
 class InviteDialog(discord.ui.LayoutView):
     def __init__(self, interaction: discord.Interaction, target_guild: discord.Guild, invite_url: str):
         """Initialize the invite dialog view."""
-        super().__init__(timeout=INVITE_TIMEOUT)
+        super().__init__(timeout=INVITE_TIMEOUT + 2.5)
         self.interaction = interaction
         self.target_guild = target_guild
         self.invite_url = invite_url
@@ -36,7 +36,8 @@ class InviteDialog(discord.ui.LayoutView):
         container.add_item(
             discord.ui.TextDisplay(
                 f"-# You have been invited to join **{target_guild.name}**! "
-                f"This invite expires <t:{int(self.interaction.created_at.timestamp()) + INVITE_TIMEOUT}:R>."
+                f"This invite expires "
+                f"<t:{int(self.interaction.created_at.timestamp()) + INVITE_TIMEOUT + 2}:R>."
             )
         )
         container.add_item(discord.ui.Separator())
