@@ -133,8 +133,10 @@ class Invite(commands.Cog):
                 reason=f"Invite link for {interaction.user} (User ID: {interaction.user.id})")
 
             # Send the invite as an ephemeral message
-            invite_url = invite.url
-            await interaction.followup.send(view=InviteDialog(interaction, target_guild, invite_url))
+            await interaction.followup.send(
+                view=InviteDialog(interaction, target_guild, invite.url),
+                ephemeral=True
+            )
 
         except discord.Forbidden:
             await interaction.followup.send(
