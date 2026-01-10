@@ -2,7 +2,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from config import SYNC_GUILD, TARGET_GUILD
+from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL
 
 guild = discord.Object(id=SYNC_GUILD)
 
@@ -32,6 +32,15 @@ class Invite(commands.Cog):
             )
             return
 
+        # Validate TARGET_CHANNEL is configured
+        if not TARGET_CHANNEL:
+            await interaction.followup.send(
+                "Target channel is not configured. "
+                "Please contact the bot administrator.",
+                ephemeral=True
+            )
+            return
+
         # Get the target guild
         target_guild = self.bot.get_guild(int(TARGET_GUILD))
         if not target_guild:
@@ -42,18 +51,21 @@ class Invite(commands.Cog):
             )
             return
 
-        # Find a suitable channel to create the invite from
-        # Prefer the first text channel where the bot has create_instant_invite
-        invite_channel = None
-        for channel in target_guild.text_channels:
-            if channel.permissions_for(target_guild.me).create_instant_invite:
-                invite_channel = channel
-                break
-
+        # Get the specific channel to create the invite from
+        invite_channel = target_guild.get_channel(int(TARGET_CHANNEL))
         if not invite_channel:
             await interaction.followup.send(
-                "I don't have permission to create invites "
+                "I cannot find the configured channel "
                 "in the target server.",
+                ephemeral=True
+            )
+            return
+
+        # Check if bot has permission to create invites in this channel
+        if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
+            await interaction.followup.send(
+                "I don't have permission to create invites "
+                "in the configured channel.",
                 ephemeral=True
             )
             return
