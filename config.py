@@ -7,3 +7,4 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 SYNC_GUILD = os.getenv('SYNC_GUILD')
+TARGET_GUILD = os.getenv('TARGET_GUILD')  # Target server for invite links
