@@ -131,6 +131,14 @@ class Invite(commands.Cog):
             )
             return
 
+        # Check if user is already in the target server
+        if target_guild.get_member(user_id):
+            await interaction.followup.send(
+                "You are already a member of the target server.",
+                ephemeral=True
+            )
+            return
+
         # Get the specific channel to create the invite from
         invite_channel = target_guild.get_channel(TARGET_CHANNEL)
         if not invite_channel:
