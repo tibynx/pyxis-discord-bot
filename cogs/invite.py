@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT
+from config import ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
 
 guild = discord.Object(id=SYNC_GUILD)
 
@@ -27,8 +28,9 @@ class InviteDialog(discord.ui.LayoutView):
         ])
 
         # Get guild description
+        # Due to a Discord bug, guild descriptions are sometimes empty
         if target_guild.description:
-            guild_description = f"_ _\n{target_guild.description}"
+            guild_description = f"\n{target_guild.description}"
         else:
             guild_description = ""
 
@@ -43,8 +45,10 @@ class InviteDialog(discord.ui.LayoutView):
         container.add_item(discord.ui.Separator())
         section = discord.ui.Section(
             discord.ui.TextDisplay(
-                f"## {target_guild.name}\n-# 🟢 {online_members} Online    "
-                f"⚪ {total_members} Members\n{guild_description}"
+                f"## {target_guild.name}\n{ONLINE_MEMBER_INDICATOR}{online_members} Online  "
+                f"{TOTAL_MEMBER_INDICATOR}{total_members} Members\n"
+                f"Est. {target_guild.created_at.strftime('%b')} {target_guild.created_at.year}\n"
+                f"{guild_description}"
             ),
             accessory=discord.ui.Thumbnail(
                 target_guild.icon.url if target_guild.icon else None
