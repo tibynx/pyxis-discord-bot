@@ -8,6 +8,8 @@ from config import BOT_TOKEN, SYNC_GUILD
 
 # Set intents
 intents = discord.Intents.default()
+intents.members = True # Required to access guild.members
+intents.presences = True # Required to access member status
 
 # Set up logging
 logs_dir = os.path.join(os.path.dirname(__file__), "logs")
@@ -66,14 +68,21 @@ class DiscordBot(commands.Bot):
             self.logger.error("Failed to sync global interaction: %s", type(error).__name__)
             self.logger.exception(error)
 
-        # Sync specific guild commands
-        guild = discord.Object(id=SYNC_GUILD)
-        try:
-            synced_guild = await self.tree.sync(guild=guild)
-            self.logger.info("Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id)
-        except Exception as error:
-            self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
-            self.logger.exception(error)
+        # Sync specific guild commands if SYNC_GUILD is configured
+        if SYNC_GUILD:
+            guild = discord.Object(id=SYNC_GUILD)
+            try:
+                synced_guild = await self.tree.sync(guild=guild)
+                self.logger.info(
+                    "Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id
+                )
+            except Exception as error:
+                self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
+                self.logger.exception(error)
+        else:
+            self.logger.warning(
+                "SYNC_GUILD not configured; guild-specific commands will not be synced."
+            )
 
     # Log app command execution
     async def on_app_command_completion(
@@ -105,6 +114,13 @@ class DiscordBot(commands.Bot):
         else:
             send_msg = interaction.response.send_message
 
+        # Command not found
+        if isinstance(error, app_commands.CommandNotFound):
+            await send_msg(
+                "This command does not exist or is not configured properly.",
+                ephemeral=True
+            )
+            return
         # Command raised an unexpected error
         if isinstance(error, app_commands.CommandInvokeError):
             original = getattr(error, "original", error)
@@ -114,8 +130,9 @@ class DiscordBot(commands.Bot):
                     "I don't have permission to execute this command.",
                     ephemeral=True
                 )
+                return
             # Network issues or rate limiting
-            elif isinstance(original, discord.HTTPException):
+            if isinstance(original, discord.HTTPException):
                 self.logger.warning(
                     "HTTP exception occurred in interaction '%s' for user %s (User ID: %s): %s",
                     command_name, interaction.user.name, interaction.user.id, original
@@ -125,6 +142,7 @@ class DiscordBot(commands.Bot):
                     "I might have been rate limited. Please try again later.",
                     ephemeral=True
                 )
+                return
             # Handle all other CommandInvokeError cases
             else:
                 self.logger.error(
@@ -136,7 +154,6 @@ class DiscordBot(commands.Bot):
                     "An error occurred while executing the command.",
                     ephemeral=True
                 )
-            return
         # Other errors
         else:
             self.logger.error(

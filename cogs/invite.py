@@ -1,24 +1,193 @@
 """Cog for invite related commands"""
+import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
-from config import SYNC_GUILD
+from config import (
+    SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT,
+    ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
+)
 
-guild = discord.Object(id=SYNC_GUILD)
+# Invite dialog
+class InviteDialog(discord.ui.LayoutView):
+    """Dialog view for invites."""
+    def __init__(
+        self, interaction: discord.Interaction,
+        target_guild: discord.Guild, invite_url: str, expires_timestamp: int
+    ):
+        """Initialize the invite dialog view."""
+        super().__init__(timeout=INVITE_TIMEOUT + 2.5)
+        self.interaction = interaction
+        self.target_guild = target_guild
+        self.invite_url = invite_url
+
+        # Count guild members
+        total_members = (
+            target_guild.member_count
+            if target_guild.member_count is not None
+            else len(target_guild.members)
+        )
+        online_members = len([
+            member for member in target_guild.members
+            if member.status != discord.Status.offline
+        ])
+
+        # Get guild description
+        # Due to a Discord bug, guild descriptions are sometimes empty
+        if target_guild.description:
+            guild_description = f"\n{target_guild.description}"
+        else:
+            guild_description = ""
+
+        container = discord.ui.Container()
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"-# You have been invited to join **{target_guild.name}**! "
+                f"This invite expires <t:{expires_timestamp}:R>."
+            )
+        )
+        container.add_item(discord.ui.Separator())
+        section = discord.ui.Section(
+            discord.ui.TextDisplay(
+                f"## {target_guild.name}\n{ONLINE_MEMBER_INDICATOR}{online_members} Online  "
+                f"{TOTAL_MEMBER_INDICATOR}{total_members} Members\n"
+                f"Est. {target_guild.created_at.strftime('%b')} {target_guild.created_at.year}\n"
+                f"{guild_description}"
+            ),
+            accessory=discord.ui.Thumbnail(
+                target_guild.icon.url if target_guild.icon else None
+                )
+        )
+        invite_button = discord.ui.ActionRow(discord.ui.Button(
+            label="Join Server", style=discord.ButtonStyle.link, url=invite_url
+        ))
+        container.add_item(section)
+        container.add_item(invite_button)
+        self.add_item(container)
+
+    async def on_timeout(self):
+        """Handle timeout by deleting the dialog message."""
+        try:
+            await self.interaction.delete_original_response()
+        except (discord.HTTPException, discord.NotFound):
+            pass
+
 
 class Invite(commands.Cog):
     """Invite related commands"""
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """Initialize the Invite cog."""
         self.bot = bot
+        # Track active invites per user {user_id: (invite_object, cleanup_task)}
+        self.active_invites = {}
 
-    # This is a test command - will be removed later
-    # This command will ONLY appear in the specified guild
-    @app_commands.command(name="test", description="A server-specific command")
-    @app_commands.guilds(guild)
-    async def test_command(self, interaction: discord.Interaction):
-        await interaction.response.send_message("tesing", ephemeral=True)
+    async def _cleanup_invite(self, user_id: int, invite: discord.Invite) -> None:
+        """Clean up an invite after the timeout."""
+        await asyncio.sleep(INVITE_TIMEOUT)
+        if user_id in self.active_invites:
+            stored_invite, _ = self.active_invites[user_id]
+            if stored_invite == invite:
+                try:
+                    await invite.delete(reason="Invite expired")
+                except (discord.HTTPException, discord.NotFound):
+                    pass
+                finally:
+                    self.active_invites.pop(user_id, None)
 
-async def setup(bot):
+    @app_commands.command(
+        name="join",
+        description="Get a personal invite link to join the target server"
+    )
+    @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
+    async def join_command(self, interaction: discord.Interaction) -> None:
+        """Generate a personal invite link to the target server."""
+        # Defer response since invite creation might take a moment
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = interaction.user.id
+        # Spam prevention: Check if the user already has an active invite
+        if user_id in self.active_invites:
+            await interaction.followup.send(
+                "You already have an active invite link. "
+                "Please wait for it to expire before requesting a new one.",
+                ephemeral=True
+            )
+            return
+
+        # Validate configuration
+        if not TARGET_GUILD or not TARGET_CHANNEL:
+            await interaction.followup.send(
+                "Target server or channel is not configured. "
+                "Please contact the bot administrator.",
+                ephemeral=True
+            )
+            return
+
+        # Get the target guild
+        target_guild = self.bot.get_guild(TARGET_GUILD)
+        if not target_guild:
+            await interaction.followup.send(
+                "I cannot find the target server. Make sure I'm added to it.",
+                ephemeral=True
+            )
+            return
+
+        # Check if the user is already in the target server
+        if target_guild.get_member(user_id):
+            await interaction.followup.send(
+                "You are already a member of the target server.",
+                ephemeral=True
+            )
+            return
+
+        # Get the specific channel to create the invite from
+        invite_channel = target_guild.get_channel(TARGET_CHANNEL)
+        if not invite_channel:
+            await interaction.followup.send(
+                "I cannot find the configured channel in the target server.",
+                ephemeral=True
+            )
+            return
+
+        # Check if the bot has permission to create invites in this channel
+        if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
+            await interaction.followup.send(
+                "I don't have permission to create invites in the configured channel.",
+                ephemeral=True
+            )
+            return
+
+        try:
+            # Create the invite with specified parameters
+            invite = await invite_channel.create_invite(
+                max_age=INVITE_TIMEOUT,  # One-time use invite timeout
+                max_uses=1,  # One-time use only
+                unique=True,  # Generate a unique invite
+                reason=f"Invite link for {interaction.user} (User ID: {user_id})"
+            )
+            expires_timestamp = int(interaction.created_at.timestamp()) + INVITE_TIMEOUT
+
+            # Track the invite and schedule cleanup
+            task = asyncio.create_task(self._cleanup_invite(user_id, invite))
+            self.active_invites[user_id] = (invite, task)
+
+            # Send the invite as an ephemeral message
+            await interaction.followup.send(
+                view=InviteDialog(interaction, target_guild, invite.url, expires_timestamp),
+                ephemeral=True
+            )
+
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "I don't have permission to create invites in the target server.",
+                ephemeral=True
+            )
+        except Exception as e:
+            await interaction.followup.send(
+                f"An error occurred while creating the invite: {e}",
+                ephemeral=True
+            )
+
+async def setup(bot: commands.Bot) -> None:
     """Load the Invite cog."""
     await bot.add_cog(Invite(bot))
