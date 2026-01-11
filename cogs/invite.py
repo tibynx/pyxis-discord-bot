@@ -12,7 +12,7 @@ from config import (
 class InviteDialog(discord.ui.LayoutView):
     def __init__(
         self, interaction: discord.Interaction,
-        target_guild: discord.Guild, invite_url: str
+        target_guild: discord.Guild, invite_url: str, expires_timestamp: int
     ):
         """Initialize the invite dialog view."""
         super().__init__(timeout=INVITE_TIMEOUT + 2.5)
@@ -42,8 +42,7 @@ class InviteDialog(discord.ui.LayoutView):
         container.add_item(
             discord.ui.TextDisplay(
                 f"-# You have been invited to join **{target_guild.name}**! "
-                f"This invite expires "
-                f"<t:{int(self.interaction.created_at.timestamp()) + INVITE_TIMEOUT + 2}:R>."
+                f"This invite expires <t:{expires_timestamp}:R>."
             )
         )
         container.add_item(discord.ui.Separator())
@@ -78,20 +77,21 @@ class Invite(commands.Cog):
     def __init__(self, bot: commands.Bot):
         """Initialize the Invite cog."""
         self.bot = bot
-        # Track active invites per user {user_id: (invite, task)}
+        # Track active invites per user {user_id: (invite_object, cleanup_task)}
         self.active_invites = {}
 
-    async def _cleanup_invite(self, user_id: int, delay: int) -> None:
-        """Clean up an invite after the specified delay."""
-        await asyncio.sleep(delay)
+    async def _cleanup_invite(self, user_id: int, invite: discord.Invite) -> None:
+        """Clean up an invite after the timeout."""
+        await asyncio.sleep(INVITE_TIMEOUT)
         if user_id in self.active_invites:
-            invite, _ = self.active_invites[user_id]
-            try:
-                await invite.delete(reason="Invite expired")
-            except (discord.HTTPException, discord.NotFound):
-                pass
-            finally:
-                self.active_invites.pop(user_id, None)
+            stored_invite, _ = self.active_invites[user_id]
+            if stored_invite == invite:
+                try:
+                    await invite.delete(reason="Invite expired")
+                except (discord.HTTPException, discord.NotFound):
+                    pass
+                finally:
+                    self.active_invites.pop(user_id, None)
 
     @app_commands.command(
         name="join",
@@ -103,8 +103,9 @@ class Invite(commands.Cog):
         # Defer response since invite creation might take a moment
         await interaction.response.defer(ephemeral=True)
 
-        # Check if user already has an active invite
-        if interaction.user.id in self.active_invites:
+        user_id = interaction.user.id
+        # Spam prevention: Check if user already has an active invite
+        if user_id in self.active_invites:
             await interaction.followup.send(
                 "You already have an active invite link. "
                 "Please wait for it to expire before requesting a new one.",
@@ -112,40 +113,29 @@ class Invite(commands.Cog):
             )
             return
 
-        # Validate TARGET_GUILD is configured
-        if not TARGET_GUILD:
+        # Validate configuration
+        if not TARGET_GUILD or not TARGET_CHANNEL:
             await interaction.followup.send(
-                "Target server is not configured. "
-                "Please contact the bot administrator.",
-                ephemeral=True
-            )
-            return
-
-        # Validate TARGET_CHANNEL is configured
-        if not TARGET_CHANNEL:
-            await interaction.followup.send(
-                "Target channel is not configured. "
+                "Target server or channel is not configured. "
                 "Please contact the bot administrator.",
                 ephemeral=True
             )
             return
 
         # Get the target guild
-        target_guild = self.bot.get_guild(int(TARGET_GUILD))
+        target_guild = self.bot.get_guild(TARGET_GUILD)
         if not target_guild:
             await interaction.followup.send(
-                "I cannot find the target server. "
-                "Make sure I'm added to it.",
+                "I cannot find the target server. Make sure I'm added to it.",
                 ephemeral=True
             )
             return
 
         # Get the specific channel to create the invite from
-        invite_channel = target_guild.get_channel(int(TARGET_CHANNEL))
+        invite_channel = target_guild.get_channel(TARGET_CHANNEL)
         if not invite_channel:
             await interaction.followup.send(
-                "I cannot find the configured channel "
-                "in the target server.",
+                "I cannot find the configured channel in the target server.",
                 ephemeral=True
             )
             return
@@ -153,36 +143,39 @@ class Invite(commands.Cog):
         # Check if bot has permission to create invites in this channel
         if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
             await interaction.followup.send(
-                "I don't have permission to create invites "
-                "in the configured channel.",
+                "I don't have permission to create invites in the configured channel.",
                 ephemeral=True
             )
             return
 
-        # Create the invite with specified parameters
         try:
+            # Create the invite with specified parameters
             invite = await invite_channel.create_invite(
                 max_age=INVITE_TIMEOUT,  # One-time use invite timeout
                 max_uses=1,  # One-time use only
                 unique=True,  # Generate a unique invite
-                reason=f"Invite link for {interaction.user} (User ID: {interaction.user.id})")
+                reason=f"Invite link for {interaction.user} (User ID: {user_id})"
+            )
+            expires_timestamp = int(interaction.created_at.timestamp()) + INVITE_TIMEOUT
 
             # Track the invite and schedule cleanup
-            cleanup_task = asyncio.create_task(
-                self._cleanup_invite(interaction.user.id, INVITE_TIMEOUT)
-            )
-            self.active_invites[interaction.user.id] = (invite, cleanup_task)
+            task = asyncio.create_task(self._cleanup_invite(user_id, invite))
+            self.active_invites[user_id] = (invite, task)
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
-                view=InviteDialog(interaction, target_guild, invite.url),
+                view=InviteDialog(interaction, target_guild, invite.url, expires_timestamp),
                 ephemeral=True
             )
 
         except discord.Forbidden:
             await interaction.followup.send(
-                "I don't have permission to create invites "
-                "in the target server.",
+                "I don't have permission to create invites in the target server.",
+                ephemeral=True
+            )
+        except Exception as e:
+            await interaction.followup.send(
+                f"An error occurred while creating the invite: {e}",
                 ephemeral=True
             )
 
