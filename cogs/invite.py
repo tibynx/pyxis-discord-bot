@@ -3,10 +3,10 @@ import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
-from config import SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT
-from config import ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
-
-guild = discord.Object(id=SYNC_GUILD)
+from config import (
+    SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT,
+    ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
+)
 
 # Invite dialog
 class InviteDialog(discord.ui.LayoutView):
@@ -75,7 +75,7 @@ class InviteDialog(discord.ui.LayoutView):
 
 class Invite(commands.Cog):
     """Invite related commands"""
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         """Initialize the Invite cog."""
         self.bot = bot
         # Track active invites per user {user_id: (invite, task)}
@@ -97,7 +97,7 @@ class Invite(commands.Cog):
         name="join",
         description="Get a personal invite link to join the target server"
     )
-    @app_commands.guilds(guild)
+    @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
     async def join_command(self, interaction: discord.Interaction) -> None:
         """Generate a personal invite link to the target server."""
         # Defer response since invite creation might take a moment
@@ -186,7 +186,6 @@ class Invite(commands.Cog):
                 ephemeral=True
             )
 
-
-async def setup(bot):
+async def setup(bot: commands.Bot) -> None:
     """Load the Invite cog."""
     await bot.add_cog(Invite(bot))

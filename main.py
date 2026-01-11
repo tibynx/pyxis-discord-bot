@@ -68,14 +68,17 @@ class DiscordBot(commands.Bot):
             self.logger.error("Failed to sync global interaction: %s", type(error).__name__)
             self.logger.exception(error)
 
-        # Sync specific guild commands
-        guild = discord.Object(id=SYNC_GUILD)
-        try:
-            synced_guild = await self.tree.sync(guild=guild)
-            self.logger.info("Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id)
-        except Exception as error:
-            self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
-            self.logger.exception(error)
+        # Sync specific guild commands if SYNC_GUILD is configured
+        if SYNC_GUILD:
+            guild = discord.Object(id=SYNC_GUILD)
+            try:
+                synced_guild = await self.tree.sync(guild=guild)
+                self.logger.info("Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id)
+            except Exception as error:
+                self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
+                self.logger.exception(error)
+        else:
+            self.logger.warning("SYNC_GUILD not configured; guild-specific commands will not be synced.")
 
     # Log app command execution
     async def on_app_command_completion(
