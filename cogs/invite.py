@@ -65,7 +65,7 @@ class InviteDialog(discord.ui.LayoutView):
         """Handle timeout by deleting the dialog message."""
         try:
             await self.interaction.delete_original_response()
-        except discord.HTTPException:
+        except (discord.HTTPException, discord.NotFound):
             pass
 
 
