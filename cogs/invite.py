@@ -1,4 +1,5 @@
 """Cog for invite related commands"""
+import asyncio
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -9,7 +10,10 @@ guild = discord.Object(id=SYNC_GUILD)
 
 # Invite dialog
 class InviteDialog(discord.ui.LayoutView):
-    def __init__(self, interaction: discord.Interaction, target_guild: discord.Guild, invite_url: str):
+    def __init__(
+        self, interaction: discord.Interaction,
+        target_guild: discord.Guild, invite_url: str
+    ):
         """Initialize the invite dialog view."""
         super().__init__(timeout=INVITE_TIMEOUT + 2.5)
         self.interaction = interaction
@@ -74,6 +78,20 @@ class Invite(commands.Cog):
     def __init__(self, bot):
         """Initialize the Invite cog."""
         self.bot = bot
+        # Track active invites per user {user_id: (invite, task)}
+        self.active_invites = {}
+
+    async def _cleanup_invite(self, user_id: int, delay: int) -> None:
+        """Clean up an invite after the specified delay."""
+        await asyncio.sleep(delay)
+        if user_id in self.active_invites:
+            invite, _ = self.active_invites[user_id]
+            try:
+                await invite.delete(reason="Invite expired")
+            except (discord.HTTPException, discord.NotFound):
+                pass
+            finally:
+                self.active_invites.pop(user_id, None)
 
     @app_commands.command(
         name="join",
@@ -84,6 +102,15 @@ class Invite(commands.Cog):
         """Generate a personal invite link to the target server."""
         # Defer response since invite creation might take a moment
         await interaction.response.defer(ephemeral=True)
+
+        # Check if user already has an active invite
+        if interaction.user.id in self.active_invites:
+            await interaction.followup.send(
+                "You already have an active invite link. "
+                "Please wait for it to expire before requesting a new one.",
+                ephemeral=True
+            )
+            return
 
         # Validate TARGET_GUILD is configured
         if not TARGET_GUILD:
@@ -139,6 +166,12 @@ class Invite(commands.Cog):
                 max_uses=1,  # One-time use only
                 unique=True,  # Generate a unique invite
                 reason=f"Invite link for {interaction.user} (User ID: {interaction.user.id})")
+
+            # Track the invite and schedule cleanup
+            cleanup_task = asyncio.create_task(
+                self._cleanup_invite(interaction.user.id, INVITE_TIMEOUT)
+            )
+            self.active_invites[interaction.user.id] = (invite, cleanup_task)
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
