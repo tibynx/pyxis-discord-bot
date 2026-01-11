@@ -110,6 +110,13 @@ class DiscordBot(commands.Bot):
         else:
             send_msg = interaction.response.send_message
 
+        # Command not found
+        if isinstance(error, app_commands.CommandNotFound):
+            await send_msg(
+                "This command does not exist or is not configured properly.",
+                ephemeral=True
+            )
+            return
         # Command raised an unexpected error
         if isinstance(error, app_commands.CommandInvokeError):
             original = getattr(error, "original", error)
@@ -119,6 +126,7 @@ class DiscordBot(commands.Bot):
                     "I don't have permission to execute this command.",
                     ephemeral=True
                 )
+                return
             # Network issues or rate limiting
             elif isinstance(original, discord.HTTPException):
                 self.logger.warning(
@@ -130,6 +138,7 @@ class DiscordBot(commands.Bot):
                     "I might have been rate limited. Please try again later.",
                     ephemeral=True
                 )
+                return
             # Handle all other CommandInvokeError cases
             else:
                 self.logger.error(
