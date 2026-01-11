@@ -73,12 +73,16 @@ class DiscordBot(commands.Bot):
             guild = discord.Object(id=SYNC_GUILD)
             try:
                 synced_guild = await self.tree.sync(guild=guild)
-                self.logger.info("Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id)
+                self.logger.info(
+                    "Synced %d guild interactions to Guild ID %s", len(synced_guild), guild.id
+                )
             except Exception as error:
                 self.logger.error("Failed to sync guild interaction: %s", type(error).__name__)
                 self.logger.exception(error)
         else:
-            self.logger.warning("SYNC_GUILD not configured; guild-specific commands will not be synced.")
+            self.logger.warning(
+                "SYNC_GUILD not configured; guild-specific commands will not be synced."
+            )
 
     # Log app command execution
     async def on_app_command_completion(
@@ -128,7 +132,7 @@ class DiscordBot(commands.Bot):
                 )
                 return
             # Network issues or rate limiting
-            elif isinstance(original, discord.HTTPException):
+            if isinstance(original, discord.HTTPException):
                 self.logger.warning(
                     "HTTP exception occurred in interaction '%s' for user %s (User ID: %s): %s",
                     command_name, interaction.user.name, interaction.user.id, original
@@ -150,7 +154,6 @@ class DiscordBot(commands.Bot):
                     "An error occurred while executing the command.",
                     ephemeral=True
                 )
-            return
         # Other errors
         else:
             self.logger.error(

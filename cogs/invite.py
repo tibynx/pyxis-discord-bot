@@ -10,6 +10,7 @@ from config import (
 
 # Invite dialog
 class InviteDialog(discord.ui.LayoutView):
+    """Dialog view for invites."""
     def __init__(
         self, interaction: discord.Interaction,
         target_guild: discord.Guild, invite_url: str, expires_timestamp: int
@@ -104,7 +105,7 @@ class Invite(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         user_id = interaction.user.id
-        # Spam prevention: Check if user already has an active invite
+        # Spam prevention: Check if the user already has an active invite
         if user_id in self.active_invites:
             await interaction.followup.send(
                 "You already have an active invite link. "
@@ -131,7 +132,7 @@ class Invite(commands.Cog):
             )
             return
 
-        # Check if user is already in the target server
+        # Check if the user is already in the target server
         if target_guild.get_member(user_id):
             await interaction.followup.send(
                 "You are already a member of the target server.",
@@ -148,7 +149,7 @@ class Invite(commands.Cog):
             )
             return
 
-        # Check if bot has permission to create invites in this channel
+        # Check if the bot has permission to create invites in this channel
         if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
             await interaction.followup.send(
                 "I don't have permission to create invites in the configured channel.",
