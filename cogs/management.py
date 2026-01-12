@@ -76,7 +76,8 @@ class Management(commands.Cog):
             await guild.edit(
                 invites_disabled_until=None,
                 dms_disabled_until=None,
-                reason=f"Security actions disabled by {interaction.user} (ID: {interaction.user.id})"
+                reason=f"Security actions disabled by {interaction.user} "
+                       f"(ID: {interaction.user.id})"
             )
             await interaction.response.send_message(
                 "Successfully disabled security actions.",
@@ -101,7 +102,10 @@ class Management(commands.Cog):
         try:
             invites = await interaction.guild.invites()
             if not invites:
-                await interaction.followup.send("No active invites found to delete.", ephemeral=True)
+                await interaction.followup.send(
+                    "No active invites found to delete.",
+                    ephemeral=True
+                )
                 return
 
             count = 0
