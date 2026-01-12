@@ -81,6 +81,30 @@ class Management(commands.Cog):
                 ephemeral=True
             )
 
+    # Purge all invites
+    @app_commands.command(
+        name="purgeinvites",
+        description="Purge all server invites."
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def purge_invites(self, interaction: discord.Interaction):
+        """Purge all server invites."""
+        await interaction.response.defer(ephemeral=True)
+        try:
+            for invite in await interaction.guild.invites():
+                await invite.delete(
+                    reason=f"Invites purged by {interaction.user} (User ID: {interaction.user.id})"
+                )
+            await interaction.followup.send(
+                "All server invites have been deleted.",
+                ephemeral=True
+            )
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "I don't have permission to delete invites.",
+                ephemeral=True
+            )
+
 async def setup(bot: commands.Bot) -> None:
     """Load the Management cog."""
     await bot.add_cog(Management(bot))
