@@ -201,6 +201,10 @@ class Invite(commands.Cog):
         if member.guild.id != TARGET_GUILD:
             return
 
+        # Skip if we have no tracked invites
+        if not self.invite_to_user:
+            return
+
         # Get all current invites in the guild
         try:
             current_invites = await member.guild.invites()
@@ -212,43 +216,58 @@ class Invite(commands.Cog):
         current_invite_codes = {inv.code for inv in current_invites}
 
         # Check which of our tracked invites is missing (was used)
-        for invite_code, intended_user_id in list(self.invite_to_user.items()):
-            # If this tracked invite is no longer in the current invites, it was just used
+        # We only check tracked invites that are missing to avoid false positives
+        used_invite_code = None
+        intended_user_id = None
+
+        for invite_code, user_id in list(self.invite_to_user.items()):
+            # If this tracked invite is no longer in the current invites, it might have been used
             if invite_code not in current_invite_codes:
-                # Check if the member who joined is the intended user
-                if member.id != intended_user_id:
-                    # This is impersonation - kick the member
-                    try:
-                        await member.kick(
-                            reason=f"Unauthorized use of invite link intended for user ID {intended_user_id}"
-                        )
-                        self.bot.logger.warning(
-                            "Kicked user %s (User ID: %s) for using invite intended for User ID %s",
-                            member, member.id, intended_user_id
-                        )
-                    except (discord.Forbidden, discord.HTTPException) as e:
-                        self.bot.logger.error(
-                            "Failed to kick user %s (User ID: %s) for impersonation: %s",
-                            member, member.id, e
-                        )
-                else:
-                    # Correct user joined - log success
-                    self.bot.logger.info(
-                        "User %s (User ID: %s) successfully joined using their invite",
-                        member, member.id
-                    )
-
-                # Clean up the tracking for this invite
-                self.invite_to_user.pop(invite_code, None)
-                # Also clean up from active_invites if it exists
-                if intended_user_id in self.active_invites:
-                    stored_invite, task = self.active_invites[intended_user_id]
+                # Double-check: this invite should have been in active_invites
+                # If it's not, it was already cleaned up (expired/deleted) and this is a false alarm
+                if user_id in self.active_invites:
+                    stored_invite, _ = self.active_invites[user_id]
                     if stored_invite.code == invite_code:
-                        task.cancel()  # Cancel the cleanup task
-                        self.active_invites.pop(intended_user_id, None)
+                        # This is a legitimate tracked invite that was just used
+                        used_invite_code = invite_code
+                        intended_user_id = user_id
+                        break
+                else:
+                    # This invite was already cleaned up, remove it from tracking
+                    self.invite_to_user.pop(invite_code, None)
 
-                # Once we've found the used invite, stop checking
-                break
+        # If we found a used invite, verify the user
+        if used_invite_code and intended_user_id:
+            # Check if the member who joined is the intended user
+            if member.id != intended_user_id:
+                # This is impersonation - kick the member
+                try:
+                    await member.kick(
+                        reason=f"Unauthorized use of invite link intended for user ID {intended_user_id}"
+                    )
+                    self.bot.logger.warning(
+                        "Kicked user %s (User ID: %s) for using invite intended for User ID %s",
+                        member, member.id, intended_user_id
+                    )
+                except (discord.Forbidden, discord.HTTPException) as e:
+                    self.bot.logger.error(
+                        "Failed to kick user %s (User ID: %s) for impersonation: %s",
+                        member, member.id, e
+                    )
+            else:
+                # Correct user joined - log success
+                self.bot.logger.info(
+                    "User %s (User ID: %s) successfully joined using their invite",
+                    member, member.id
+                )
+
+            # Clean up the tracking for this invite
+            self.invite_to_user.pop(used_invite_code, None)
+            if intended_user_id in self.active_invites:
+                stored_invite, task = self.active_invites[intended_user_id]
+                if stored_invite.code == used_invite_code:
+                    task.cancel()  # Cancel the cleanup task
+                    self.active_invites.pop(intended_user_id, None)
 
 async def setup(bot: commands.Bot) -> None:
     """Load the Invite cog."""
