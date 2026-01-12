@@ -80,6 +80,8 @@ class Invite(commands.Cog):
         self.bot = bot
         # Track active invites per user {user_id: (invite_object, cleanup_task)}
         self.active_invites = {}
+        # Track invite code to intended user mapping {invite_code: user_id}
+        self.invite_to_user = {}
 
     async def _cleanup_invite(self, user_id: int, invite: discord.Invite) -> None:
         """Clean up an invite after the timeout."""
@@ -93,6 +95,8 @@ class Invite(commands.Cog):
                     pass
                 finally:
                     self.active_invites.pop(user_id, None)
+                    # Also remove from invite mapping
+                    self.invite_to_user.pop(invite.code, None)
 
     @app_commands.command(
         name="join",
@@ -170,6 +174,8 @@ class Invite(commands.Cog):
             # Track the invite and schedule cleanup
             task = asyncio.create_task(self._cleanup_invite(user_id, invite))
             self.active_invites[user_id] = (invite, task)
+            # Map invite code to intended user
+            self.invite_to_user[invite.code] = user_id
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
@@ -187,6 +193,62 @@ class Invite(commands.Cog):
                 f"An error occurred while creating the invite: {e}",
                 ephemeral=True
             )
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        """Handle member join events to verify invite usage."""
+        # Only check joins to the target guild
+        if member.guild.id != TARGET_GUILD:
+            return
+
+        # Get all current invites in the guild
+        try:
+            current_invites = await member.guild.invites()
+        except (discord.Forbidden, discord.HTTPException):
+            # Can't check invites if we don't have permission
+            return
+
+        # Build a set of current invite codes
+        current_invite_codes = {inv.code for inv in current_invites}
+
+        # Check which of our tracked invites is missing (was used)
+        for invite_code, intended_user_id in list(self.invite_to_user.items()):
+            # If this tracked invite is no longer in the current invites, it was just used
+            if invite_code not in current_invite_codes:
+                # Check if the member who joined is the intended user
+                if member.id != intended_user_id:
+                    # This is impersonation - kick the member
+                    try:
+                        await member.kick(
+                            reason=f"Unauthorized use of invite link intended for user ID {intended_user_id}"
+                        )
+                        self.bot.logger.warning(
+                            "Kicked user %s (User ID: %s) for using invite intended for User ID %s",
+                            member, member.id, intended_user_id
+                        )
+                    except (discord.Forbidden, discord.HTTPException) as e:
+                        self.bot.logger.error(
+                            "Failed to kick user %s (User ID: %s) for impersonation: %s",
+                            member, member.id, e
+                        )
+                else:
+                    # Correct user joined - log success
+                    self.bot.logger.info(
+                        "User %s (User ID: %s) successfully joined using their invite",
+                        member, member.id
+                    )
+
+                # Clean up the tracking for this invite
+                self.invite_to_user.pop(invite_code, None)
+                # Also clean up from active_invites if it exists
+                if intended_user_id in self.active_invites:
+                    stored_invite, task = self.active_invites[intended_user_id]
+                    if stored_invite.code == invite_code:
+                        task.cancel()  # Cancel the cleanup task
+                        self.active_invites.pop(intended_user_id, None)
+
+                # Once we've found the used invite, stop checking
+                break
 
 async def setup(bot: commands.Bot) -> None:
     """Load the Invite cog."""
