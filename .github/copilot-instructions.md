@@ -1,7 +1,7 @@
 # Copilot Instructions for Pyxis
 
 ## Project Overview
-Pyxis is a Discord bot designed to invite users to other servers. It's built using discord.py (>= 2.6.4) with a cog-based architecture.
+Pyxis is a Discord bot designed to invite users to other servers and to manage servers. It's built using discord.py (>= 2.6.4) with a cog-based architecture.
 
 ## Architecture & Structure
 
@@ -16,7 +16,7 @@ Pyxis is a Discord bot designed to invite users to other servers. It's built usi
 - The bot uses discord.py's Application Commands (slash commands)
 - No traditional command prefix is used (set to empty string)
 - Commands are synchronized both globally and to a specific guild (SYNC_GUILD)
-- Default intents are used
+- Default intents are used, but others can be added if required
 
 ## Coding Conventions
 
@@ -26,11 +26,14 @@ Pyxis is a Discord bot designed to invite users to other servers. It's built usi
 - Use async/await for all Discord operations
 - Keep code clean and readable with appropriate comments
 - Make simple, minimal docstrings
-- Make sure lines are not longer than 100 characters per line (Pylint)
+- Adhere to Pylint rules:
+  - C0301: Line too long (line-too-long)
+  - C0304: Final newline missing (missing-final-newline)
 
 ### Discord.py Patterns
 - Use `app_commands.command()` decorator for slash commands
 - Use `@app_commands.guilds(guild)` to restrict commands to specific guilds
+- use `@app_commands.guild_only()` to restrict commands to be used in guilds only
 - Always handle exceptions when loading extensions and syncing commands
 - Use `ephemeral=True` for command responses that should be private
 - Cogs must have an async `setup()` function to register with the bot
