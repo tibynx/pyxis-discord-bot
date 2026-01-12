@@ -5,9 +5,8 @@ from discord.ext import commands
 from discord import app_commands
 
 class Management(commands.Cog):
-    """Management related commands"""
-    def __init__(self, bot: commands.Bot):
-        """Initialize the Management cog."""
+    """Cog for guild management and security commands."""
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     # Pause guild invites and DMs
@@ -19,36 +18,36 @@ class Management(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.guild_only()
     @app_commands.choices(duration=[
-        discord.app_commands.Choice(name="30 minutes", value=1800),
-        discord.app_commands.Choice(name="1 hour", value=3600),
-        discord.app_commands.Choice(name="2 hours", value=7200),
-        discord.app_commands.Choice(name="4 hours", value=14400),
-        discord.app_commands.Choice(name="6 hours", value=21600),
-        discord.app_commands.Choice(name="12 hours", value=43200),
-        discord.app_commands.Choice(name="1 day", value=86400)
+        app_commands.Choice(name="30 minutes", value=1800),
+        app_commands.Choice(name="1 hour", value=3600),
+        app_commands.Choice(name="2 hours", value=7200),
+        app_commands.Choice(name="4 hours", value=14400),
+        app_commands.Choice(name="6 hours", value=21600),
+        app_commands.Choice(name="12 hours", value=43200),
+        app_commands.Choice(name="1 day", value=86400)
     ])
     @app_commands.describe(
-        duration="The duration enable security actions for"
+        duration="The duration to enable security actions for"
     )
-    async def enable_security_actions(
+    async def lock_server(
             self, interaction: discord.Interaction,
-            duration: discord.app_commands.Choice[int]
+            duration: int
     ) -> None:
         """Pause invites and DMs for the specified duration."""
-        time = discord.utils.utcnow() + timedelta(seconds=duration.value)
+        until = discord.utils.utcnow() + timedelta(seconds=duration)
         try:
             await interaction.guild.edit(
-                invites_disabled_until=time,
-                dms_disabled_until=time,
-                reason=f"Enabled security actions by {interaction.user} (User ID: {interaction.user.id})"
+                invites_disabled_until=until,
+                dms_disabled_until=until,
+                reason=f"Security actions enabled by {interaction.user} (ID: {interaction.user.id})"
             )
             await interaction.response.send_message(
-                f"Enabled security actions until <t:{int(time.timestamp())}:f>.",
+                f"Security actions enabled until <t:{int(until.timestamp())}:f>.",
                 ephemeral=True
             )
         except discord.Forbidden:
             await interaction.response.send_message(
-                "I don't have permission to enable security actions.",
+                "I don't have permission to modify guild security settings.",
                 ephemeral=True
             )
 
@@ -59,47 +58,61 @@ class Management(commands.Cog):
     )
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.guild_only()
-    async def disable_security_actions(self, interaction: discord.Interaction) -> None:
+    async def unlock_server(self, interaction: discord.Interaction) -> None:
         """Resume accepting invites and private messages between members."""
-        if not interaction.guild.invites_paused() and not interaction.guild.dms_paused():
+        guild = interaction.guild
+        now = discord.utils.utcnow()
+
+        invites_paused = guild.invites_disabled_until and guild.invites_disabled_until > now
+        dms_paused = guild.dms_disabled_until and guild.dms_disabled_until > now
+
+        if not invites_paused and not dms_paused:
             await interaction.response.send_message(
-                "Security actions are not enabled.",
+                "Security actions are not currently active.",
                 ephemeral=True
             )
             return
         try:
-            await interaction.guild.edit(
+            await guild.edit(
                 invites_disabled_until=None,
                 dms_disabled_until=None,
-                reason=f"Invites resumed by {interaction.user} (User ID: {interaction.user.id})"
+                reason=f"Security actions disabled by {interaction.user} (ID: {interaction.user.id})"
             )
             await interaction.response.send_message(
-                "Disabled security actions.",
+                "Successfully disabled security actions.",
                 ephemeral=True
             )
         except discord.Forbidden:
             await interaction.response.send_message(
-                "I don't have permission to disable security actions.",
+                "I don't have permission to modify guild security settings.",
                 ephemeral=True
             )
 
     # Purge all invites
     @app_commands.command(
         name="purgeinvites",
-        description="Purge all server invites."
+        description="Purge all active server invites."
     )
     @app_commands.default_permissions(manage_guild=True)
     @app_commands.guild_only()
-    async def purge_invites(self, interaction: discord.Interaction):
+    async def purge_invites(self, interaction: discord.Interaction) -> None:
         """Purge all server invites."""
         await interaction.response.defer(ephemeral=True)
         try:
-            for invite in await interaction.guild.invites():
+            invites = await interaction.guild.invites()
+            if not invites:
+                await interaction.followup.send("No active invites found to delete.", ephemeral=True)
+                return
+
+            count = 0
+            for invite in invites:
                 await invite.delete(
-                    reason=f"Invites purged by {interaction.user} (User ID: {interaction.user.id})"
+                    reason=f"Purge requested by {interaction.user} (ID: {interaction.user.id})"
                 )
+                count += 1
+
             await interaction.followup.send(
-                "All server invites have been deleted.",
+                f"Successfully deleted {count} server {'invite' if count == 1 else 'invites'}.",
                 ephemeral=True
             )
         except discord.Forbidden:
