@@ -17,6 +17,7 @@ class Management(commands.Cog):
                     "Doesn't restrict DMs for friends, mods, or apps."
     )
     @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
     @app_commands.choices(duration=[
         discord.app_commands.Choice(name="30 minutes", value=1800),
         discord.app_commands.Choice(name="1 hour", value=3600),
@@ -57,6 +58,7 @@ class Management(commands.Cog):
         description="Resume accepting invites and private messages between members."
     )
     @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
     async def disable_security_actions(self, interaction: discord.Interaction) -> None:
         """Resume accepting invites and private messages between members."""
         if not interaction.guild.invites_paused() and not interaction.guild.dms_paused():
@@ -87,6 +89,7 @@ class Management(commands.Cog):
         description="Purge all server invites."
     )
     @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
     async def purge_invites(self, interaction: discord.Interaction):
         """Purge all server invites."""
         await interaction.response.defer(ephemeral=True)
