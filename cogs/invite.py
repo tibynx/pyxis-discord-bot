@@ -98,6 +98,41 @@ class Invite(commands.Cog):
                     # Also remove from invite mapping
                     self.invite_to_user.pop(invite.code, None)
 
+    async def _create_invite_for_user(self, user_id: int, reason: str) -> discord.Invite:
+        """Create a new invite for a specific user.
+        
+        Returns the created invite object or None if creation failed.
+        """
+        target_guild = self.bot.get_guild(TARGET_GUILD)
+        if not target_guild:
+            return None
+            
+        invite_channel = target_guild.get_channel(TARGET_CHANNEL)
+        if not invite_channel:
+            return None
+            
+        if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
+            return None
+            
+        try:
+            # Create the invite with specified parameters
+            invite = await invite_channel.create_invite(
+                max_age=INVITE_TIMEOUT,
+                max_uses=1,
+                unique=True,
+                reason=reason
+            )
+            
+            # Track the invite and schedule cleanup
+            task = asyncio.create_task(self._cleanup_invite(user_id, invite))
+            self.active_invites[user_id] = (invite, task)
+            # Map invite code to intended user
+            self.invite_to_user[invite.code] = user_id
+            
+            return invite
+        except (discord.Forbidden, discord.HTTPException):
+            return None
+
     @app_commands.command(
         name="join",
         description="Get a personal invite link to join the target server"
@@ -163,19 +198,19 @@ class Invite(commands.Cog):
 
         try:
             # Create the invite with specified parameters
-            invite = await invite_channel.create_invite(
-                max_age=INVITE_TIMEOUT,  # One-time use invite timeout
-                max_uses=1,  # One-time use only
-                unique=True,  # Generate a unique invite
-                reason=f"Invite link for {interaction.user} (User ID: {user_id})"
+            invite = await self._create_invite_for_user(
+                user_id,
+                f"Invite link for {interaction.user} (User ID: {user_id})"
             )
+            
+            if not invite:
+                await interaction.followup.send(
+                    "Failed to create an invite. Please try again later.",
+                    ephemeral=True
+                )
+                return
+                
             expires_timestamp = int(interaction.created_at.timestamp()) + INVITE_TIMEOUT
-
-            # Track the invite and schedule cleanup
-            task = asyncio.create_task(self._cleanup_invite(user_id, invite))
-            self.active_invites[user_id] = (invite, task)
-            # Map invite code to intended user
-            self.invite_to_user[invite.code] = user_id
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
@@ -238,6 +273,14 @@ class Invite(commands.Cog):
 
         # If we found a used invite, verify the user
         if used_invite_code and intended_user_id:
+            # Clean up the tracking for the old invite first
+            self.invite_to_user.pop(used_invite_code, None)
+            if intended_user_id in self.active_invites:
+                stored_invite, task = self.active_invites[intended_user_id]
+                if stored_invite.code == used_invite_code:
+                    task.cancel()  # Cancel the cleanup task
+                    self.active_invites.pop(intended_user_id, None)
+            
             # Check if the member who joined is the intended user
             if member.id != intended_user_id:
                 # This is impersonation - kick the member
@@ -254,20 +297,47 @@ class Invite(commands.Cog):
                         "Failed to kick user %s (User ID: %s) for impersonation: %s",
                         member, member.id, e
                     )
+                
+                # Create a new invite for the intended user since theirs was consumed
+                new_invite = await self._create_invite_for_user(
+                    intended_user_id,
+                    f"Replacement invite for User ID {intended_user_id} after impersonation attempt"
+                )
+                
+                if new_invite:
+                    # Try to notify the intended user via DM
+                    try:
+                        intended_user = await self.bot.fetch_user(intended_user_id)
+                        target_guild = self.bot.get_guild(TARGET_GUILD)
+                        if intended_user and target_guild:
+                            expires_timestamp = int(discord.utils.utcnow().timestamp()) + INVITE_TIMEOUT
+                            await intended_user.send(
+                                f"⚠️ Someone tried to use your invite link to **{target_guild.name}**. "
+                                f"They have been kicked and a new invite has been created for you.\n\n"
+                                f"Your new invite link: {new_invite.url}\n"
+                                f"This invite expires <t:{expires_timestamp}:R>."
+                            )
+                            self.bot.logger.info(
+                                "Created replacement invite for User ID %s and sent DM notification",
+                                intended_user_id
+                            )
+                    except (discord.Forbidden, discord.HTTPException, discord.NotFound) as e:
+                        # If we can't DM the user, just log it
+                        self.bot.logger.warning(
+                            "Created replacement invite for User ID %s but could not send DM: %s",
+                            intended_user_id, e
+                        )
+                else:
+                    self.bot.logger.error(
+                        "Failed to create replacement invite for User ID %s after impersonation",
+                        intended_user_id
+                    )
             else:
                 # Correct user joined - log success
                 self.bot.logger.info(
                     "User %s (User ID: %s) successfully joined using their invite",
                     member, member.id
                 )
-
-            # Clean up the tracking for this invite
-            self.invite_to_user.pop(used_invite_code, None)
-            if intended_user_id in self.active_invites:
-                stored_invite, task = self.active_invites[intended_user_id]
-                if stored_invite.code == used_invite_code:
-                    task.cancel()  # Cancel the cleanup task
-                    self.active_invites.pop(intended_user_id, None)
 
 async def setup(bot: commands.Bot) -> None:
     """Load the Invite cog."""
