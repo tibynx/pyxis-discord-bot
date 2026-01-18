@@ -47,17 +47,18 @@ class InviteDialog(discord.ui.LayoutView):
             )
         )
         container.add_item(discord.ui.Separator())
-        section = discord.ui.Section(
-            discord.ui.TextDisplay(
-                f"## {target_guild.name}\n{ONLINE_MEMBER_INDICATOR}{online_members} Online  "
-                f"{TOTAL_MEMBER_INDICATOR}{total_members} Members\n"
-                f"Est. {target_guild.created_at.strftime('%b')} {target_guild.created_at.year}\n"
-                f"{guild_description}"
-            ),
-            accessory=discord.ui.Thumbnail(
-                target_guild.icon.url if target_guild.icon else None
-                )
+        details = discord.ui.TextDisplay(
+            f"## {target_guild.name}\n{ONLINE_MEMBER_INDICATOR}{online_members} Online  "
+            f"{TOTAL_MEMBER_INDICATOR}{total_members} Members\n"
+            f"Est. {target_guild.created_at.strftime('%b')} {target_guild.created_at.year}\n"
+            f"{guild_description}"
         )
+
+        if target_guild.icon:
+            section = discord.ui.Section(details, accessory=discord.ui.Thumbnail(target_guild.icon.url))
+        else:
+            section = details
+
         invite_button = discord.ui.ActionRow(discord.ui.Button(
             label="Join Server", style=discord.ButtonStyle.link, url=invite_url
         ))
