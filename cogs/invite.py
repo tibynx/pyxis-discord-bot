@@ -13,7 +13,7 @@ class InviteDialog(discord.ui.LayoutView):
     """Dialog view for invites."""
     def __init__(
         self, interaction: discord.Interaction,
-        target_guild: discord.Guild, invite_url: str, expires_timestamp: int
+        target_guild: discord.Guild, invite_msg: str, invite_url: str, expires_timestamp: int
     ):
         """Initialize the invite dialog view."""
         super().__init__(timeout=INVITE_TIMEOUT + 2.5)
@@ -38,6 +38,9 @@ class InviteDialog(discord.ui.LayoutView):
             guild_description = f"\n{target_guild.description}"
         else:
             guild_description = ""
+
+        # Customizable message
+        message = discord.ui.TextDisplay(invite_msg)
 
         container = discord.ui.Container()
         container.add_item(
@@ -64,6 +67,7 @@ class InviteDialog(discord.ui.LayoutView):
         ))
         container.add_item(section)
         container.add_item(invite_button)
+        self.add_item(message)
         self.add_item(container)
 
     async def on_timeout(self):
@@ -214,11 +218,12 @@ class Invite(commands.Cog):
                 )
                 return
 
+            invite_msg = f"Here is your invite to join **{target_guild.name}**!"
             expires_timestamp = int(interaction.created_at.timestamp()) + INVITE_TIMEOUT
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
-                view=InviteDialog(interaction, target_guild, invite.url, expires_timestamp),
+                view=InviteDialog(interaction, target_guild, invite_msg, invite.url, expires_timestamp),
                 ephemeral=True
             )
 
@@ -317,11 +322,10 @@ class Invite(commands.Cog):
                     try:
                         target_guild = self.bot.get_guild(TARGET_GUILD)
                         expires_timestamp = int(discord.utils.utcnow().timestamp()) + INVITE_TIMEOUT
+                        invite_msg = f"Hey {stored_interaction.user.display_name}! Your invite was used by someone else, so we made you a new one!"
+                        # Send the invite as an ephemeral message
                         await stored_interaction.followup.send(
-                            f"⚠️ Someone tried to use your invite link to **{target_guild.name}**. "
-                            f"They have been kicked and a new invite has been created for you.\n\n"
-                            f"Your new invite link: {new_invite.url}\n"
-                            f"This invite expires <t:{expires_timestamp}:R>.",
+                            view=InviteDialog(stored_interaction, target_guild, invite_msg, new_invite.url, expires_timestamp),
                             ephemeral=True
                         )
                         self.bot.logger.info(
