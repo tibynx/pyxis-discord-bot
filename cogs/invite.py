@@ -268,11 +268,11 @@ class Invite(commands.Cog):
             # If this tracked invite is no longer in the current invites, it might have been used
             if invite_code not in current_invite_codes:
                 # Double-check: this invite should have been in active_invites
-                # If it's not, it was already cleaned up (expired/deleted) and this is a false alarm
+                # If it's not, it was already cleaned up (expired/deleted), and this is a false alarm
                 if user_id in self.active_invites:
                     stored_invite, _, _ = self.active_invites[user_id]
                     if stored_invite.code == invite_code:
-                        # This is a legitimate tracked invite that was just used
+                        # This is a legitimate-tracked invite that was just used
                         used_invite_code = invite_code
                         intended_user_id = user_id
                         break
@@ -322,7 +322,7 @@ class Invite(commands.Cog):
                 )
 
                 if new_invite and stored_interaction:
-                    # Try to send followup message to the original interaction
+                    # Try to send a followup message to the original interaction
                     try:
                         target_guild = self.bot.get_guild(TARGET_GUILD)
                         expires_timestamp = int(discord.utils.utcnow().timestamp()) + INVITE_TIMEOUT
