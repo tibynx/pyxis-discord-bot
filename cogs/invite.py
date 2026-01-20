@@ -58,7 +58,9 @@ class InviteDialog(discord.ui.LayoutView):
         )
 
         if target_guild.icon:
-            section = discord.ui.Section(details, accessory=discord.ui.Thumbnail(target_guild.icon.url))
+            section = discord.ui.Section(
+                details, accessory=discord.ui.Thumbnail(target_guild.icon.url)
+            )
         else:
             section = details
 
@@ -142,7 +144,7 @@ class Invite(commands.Cog):
 
     @app_commands.command(
         name="join",
-        description="Get a personal invite link to join the target server"
+        description="Get an invite link to join the server"
     )
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
     async def join_command(self, interaction: discord.Interaction) -> None:
@@ -164,7 +166,7 @@ class Invite(commands.Cog):
         if not TARGET_GUILD or not TARGET_CHANNEL:
             await interaction.followup.send(
                 "Target server or channel is not configured. "
-                "Please contact the bot administrator.",
+                "Please contact a moderator.",
                 ephemeral=True
             )
             return
@@ -181,7 +183,7 @@ class Invite(commands.Cog):
         # Check if the user is already in the target server
         if target_guild.get_member(user_id):
             await interaction.followup.send(
-                "You are already a member of the target server.",
+                f"You are already a member of the **{target_guild.name}**!",
                 ephemeral=True
             )
             return
@@ -223,7 +225,10 @@ class Invite(commands.Cog):
 
             # Send the invite as an ephemeral message
             await interaction.followup.send(
-                view=InviteDialog(interaction, target_guild, invite_msg, invite.url, expires_timestamp),
+                view=InviteDialog(
+                    interaction, target_guild, invite_msg,
+                    invite.url, expires_timestamp
+                ),
                 ephemeral=True
             )
 
@@ -283,7 +288,9 @@ class Invite(commands.Cog):
         # If we found a used invite, verify the user
         if used_invite_code and intended_user_id:
             # Get the stored interaction before cleaning up
-            _, task, stored_interaction = self.active_invites.get(intended_user_id, (None, None, None))
+            _, task, stored_interaction = self.active_invites.get(
+                intended_user_id, (None, None, None)
+            )
 
             # Clean up the tracking for the old invite first
             self.invite_to_user.pop(used_invite_code, None)
@@ -298,7 +305,8 @@ class Invite(commands.Cog):
                 # This is impersonation - kick the member
                 try:
                     await member.kick(
-                        reason=f"Unauthorized use of invite link intended for user ID {intended_user_id}"
+                        reason="Unauthorized use of invite link intended "
+                               f"for User ID {intended_user_id}"
                     )
                     self.bot.logger.warning(
                         "Kicked user %s (User ID: %s) for using invite intended for User ID %s",
@@ -313,7 +321,8 @@ class Invite(commands.Cog):
                 # Create a new invite for the intended user since theirs was consumed
                 new_invite = await self._create_invite_for_user(
                     intended_user_id,
-                    f"Replacement invite for User ID {intended_user_id} after impersonation attempt",
+                    f"Replacement invite for User ID {intended_user_id} "
+                    "after impersonation attempt",
                     stored_interaction
                 )
 
@@ -322,20 +331,27 @@ class Invite(commands.Cog):
                     try:
                         target_guild = self.bot.get_guild(TARGET_GUILD)
                         expires_timestamp = int(discord.utils.utcnow().timestamp()) + INVITE_TIMEOUT
-                        invite_msg = f"Hey {stored_interaction.user.display_name}! Your invite was used by someone else, so we made you a new one!"
+                        invite_msg = (f"Hey {stored_interaction.user.display_name}! Looks like "
+                                      "your invite was used by someone else, so we made you a "
+                                      "new one!")
                         # Send the invite as an ephemeral message
                         await stored_interaction.followup.send(
-                            view=InviteDialog(stored_interaction, target_guild, invite_msg, new_invite.url, expires_timestamp),
+                            view=InviteDialog(
+                                stored_interaction, target_guild, invite_msg,
+                                new_invite.url, expires_timestamp
+                            ),
                             ephemeral=True
                         )
                         self.bot.logger.info(
-                            "Created replacement invite for User ID %s and sent followup notification",
+                            "Created replacement invite for User ID %s "
+                            "and sent followup notification",
                             intended_user_id
                         )
                     except (discord.HTTPException, discord.NotFound) as e:
                         # If followup fails, log it
                         self.bot.logger.warning(
-                            "Created replacement invite for User ID %s but could not send followup: %s",
+                            "Created replacement invite for User ID %s "
+                            "but could not send followup: %s",
                             intended_user_id, e
                         )
                 else:
