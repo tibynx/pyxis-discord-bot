@@ -237,11 +237,6 @@ class Invite(commands.Cog):
                 "I don't have permission to create invites in the target server.",
                 ephemeral=True
             )
-        except Exception as e:
-            await interaction.followup.send(
-                f"An error occurred while creating the invite: {e}",
-                ephemeral=True
-            )
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
