@@ -105,7 +105,7 @@ class Invite(commands.Cog):
 
     async def _create_invite_for_user(
             self, user_id: int, reason: str, interaction: discord.Interaction = None
-    ) -> discord.Invite:
+    ) -> discord.Invite | None:
         """Create a new invite for a specific user.
 
         Returns the created invite object or None if creation failed.
