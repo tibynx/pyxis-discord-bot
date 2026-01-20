@@ -27,10 +27,10 @@ class InviteDialog(discord.ui.LayoutView):
             if target_guild.member_count is not None
             else len(target_guild.members)
         )
-        online_members = len([
-            member for member in target_guild.members
+        online_members = sum(
+            1 for member in target_guild.members
             if member.status != discord.Status.offline
-        ])
+        )
 
         # Get guild description
         # Due to a Discord bug, guild descriptions are sometimes empty
