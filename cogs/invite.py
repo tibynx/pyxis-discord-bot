@@ -150,6 +150,7 @@ class Invite(commands.Cog):
         name="join",
         description="Get an invite link to join the server"
     )
+    @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
     async def join_command(self, interaction: discord.Interaction) -> None:
         """Generate a personal invite link to the target server."""
