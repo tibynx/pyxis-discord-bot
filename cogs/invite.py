@@ -22,11 +22,9 @@ class InviteDialog(discord.ui.LayoutView):
         self.invite_url = invite_url
 
         # Count guild members
-        total_members = (
-            target_guild.member_count
-            if target_guild.member_count is not None
-            else len(target_guild.members)
-        )
+        # total_members = target_guild.member_count # member_count is more reliable than len(members)
+        total_members = target_guild.member_count or len(target_guild.members)
+        
         online_members = sum(
             1 for member in target_guild.members
             if member.status != discord.Status.offline
@@ -85,25 +83,27 @@ class Invite(commands.Cog):
     def __init__(self, bot: commands.Bot):
         """Initialize the Invite cog."""
         self.bot = bot
-        # Track active invites per user {user_id: (invite_object, cleanup_task, interaction)}
+        # Track active invites per user {user_id: {'invite': invite_object, 'task': cleanup_task, 'interaction': interaction}}
         self.active_invites = {}
         # Track invite code to intended user mapping {invite_code: user_id}
         self.invite_to_user = {}
+        # Lock for on_member_join to prevent race conditions
+        self._join_lock = asyncio.Lock()
 
-    async def _cleanup_invite(self, user_id: int, invite: discord.Invite) -> None:
+    async def _cleanup_invite(self, user_id: int, invite_code: str) -> None:
         """Clean up an invite after the timeout."""
         await asyncio.sleep(INVITE_TIMEOUT)
-        if user_id in self.active_invites:
-            stored_invite, _, _ = self.active_invites[user_id]
-            if stored_invite == invite:
-                try:
-                    await invite.delete(reason="Invite expired")
-                except (discord.HTTPException, discord.NotFound):
-                    pass
-                finally:
-                    self.active_invites.pop(user_id, None)
-                    # Also remove from invite mapping
-                    self.invite_to_user.pop(invite.code, None)
+        async with self._join_lock:
+            if user_id in self.active_invites:
+                data = self.active_invites[user_id]
+                if data['invite'].code == invite_code:
+                    try:
+                        await data['invite'].delete(reason="Invite expired")
+                    except (discord.HTTPException, discord.NotFound):
+                        pass
+                    finally:
+                        self.active_invites.pop(user_id, None)
+                        self.invite_to_user.pop(invite_code, None)
 
     async def _create_invite_for_user(
             self, user_id: int, reason: str, interaction: discord.Interaction = None
@@ -133,8 +133,12 @@ class Invite(commands.Cog):
             )
 
             # Track the invite and schedule cleanup
-            task = asyncio.create_task(self._cleanup_invite(user_id, invite))
-            self.active_invites[user_id] = (invite, task, interaction)
+            task = asyncio.create_task(self._cleanup_invite(user_id, invite.code))
+            self.active_invites[user_id] = {
+                'invite': invite,
+                'task': task,
+                'interaction': interaction
+            }
             # Map invite code to intended user
             self.invite_to_user[invite.code] = user_id
 
@@ -249,68 +253,56 @@ class Invite(commands.Cog):
         if not self.invite_to_user:
             return
 
-        # Get all current invites in the guild
-        try:
-            current_invites = await member.guild.invites()
-        except (discord.Forbidden, discord.HTTPException):
-            # Can't check invites if we don't have permission
-            return
+        async with self._join_lock:
+            # We need to find which invite was used. 
+            # Since we use max_uses=1, the invite disappears when used.
+            try:
+                current_invites = await member.guild.invites()
+            except (discord.Forbidden, discord.HTTPException) as e:
+                self.bot.logger.error("Failed to fetch invites for guild %s: %s", member.guild.id, e)
+                return
 
-        # Build a set of current invite codes
-        current_invite_codes = {inv.code for inv in current_invites}
+            current_invite_codes = {inv.code for inv in current_invites}
+            
+            used_invite_code = None
+            intended_user_id = None
 
-        # Check which of our tracked invites is missing (was used)
-        # We only check tracked invites that are missing to avoid false positives
-        used_invite_code = None
-        intended_user_id = None
+            # Look for tracked invites that are no longer in the guild's invite list
+            for invite_code, user_id in list(self.invite_to_user.items()):
+                if invite_code not in current_invite_codes:
+                    # Found a potentially used invite
+                    if user_id in self.active_invites:
+                        data = self.active_invites[user_id]
+                        if data['invite'].code == invite_code:
+                            used_invite_code = invite_code
+                            intended_user_id = user_id
+                            break
+                    else:
+                        # Stale tracking, remove it
+                        self.invite_to_user.pop(invite_code, None)
 
-        for invite_code, user_id in list(self.invite_to_user.items()):
-            # If this tracked invite is no longer in the current invites, it might have been used
-            if invite_code not in current_invite_codes:
-                # Double-check: this invite should have been in active_invites
-                # If it's not, it was already cleaned up (expired/deleted), and this is a false alarm
-                if user_id in self.active_invites:
-                    stored_invite, _, _ = self.active_invites[user_id]
-                    if stored_invite.code == invite_code:
-                        # This is a legitimate-tracked invite that was just used
-                        used_invite_code = invite_code
-                        intended_user_id = user_id
-                        break
-                else:
-                    # This invite was already cleaned up, remove it from tracking
-                    self.invite_to_user.pop(invite_code, None)
+            if not (used_invite_code and intended_user_id):
+                return
 
-        # If we found a used invite, verify the user
-        if used_invite_code and intended_user_id:
-            # Get the stored interaction before cleaning up
-            _, task, stored_interaction = self.active_invites.get(
-                intended_user_id, (None, None, None)
-            )
-
-            # Clean up the tracking for the old invite first
+            # Retrieve and clean up tracking before processing
+            data = self.active_invites.pop(intended_user_id, None)
             self.invite_to_user.pop(used_invite_code, None)
-            if intended_user_id in self.active_invites:
-                stored_invite, task, _ = self.active_invites[intended_user_id]
-                if stored_invite.code == used_invite_code:
-                    task.cancel()  # Cancel the cleanup task
-                    self.active_invites.pop(intended_user_id, None)
+            
+            if data and data.get('task'):
+                data['task'].cancel()
+            
+            stored_interaction = data.get('interaction') if data else None
 
-            # Check if the member who joined is the intended user
+            # Impersonation check
             if member.id != intended_user_id:
-                # This is impersonation - kick the member
+                self.bot.logger.warning(
+                    "Impersonation detected! User %s (ID: %s) joined using invite intended for ID %s",
+                    member, member.id, intended_user_id
+                )
+                
                 try:
                     await member.kick(
-                        reason="Unauthorized use of invite link intended "
-                               f"for User ID {intended_user_id}"
-                    )
-                    self.bot.logger.warning(
-                        "Kicked user %s (User ID: %s) for using invite intended for User ID %s",
-                        member, member.id, intended_user_id
-                    )
-                except (discord.Forbidden, discord.HTTPException) as e:
-                    self.bot.logger.error(
-                        "Failed to kick user %s (User ID: %s) for impersonation: %s",
-                        member, member.id, e
+                        reason=f"Unauthorized use of invite link intended for User ID {intended_user_id}"
                     )
 
                 # Create a new invite for the intended user since theirs was consumed
@@ -324,38 +316,20 @@ class Invite(commands.Cog):
                 if new_invite and stored_interaction:
                     # Try to send a followup message to the original interaction
                     try:
-                        target_guild = self.bot.get_guild(TARGET_GUILD)
                         expires_timestamp = int(discord.utils.utcnow().timestamp()) + INVITE_TIMEOUT
-                        invite_msg = (f"Hey {stored_interaction.user.display_name}! Looks like "
-                                      "your invite was used by someone else, so we made you a "
-                                      "new one!")
-                        # Send the invite as an ephemeral message
+                        msg = (f"Hey {stored_interaction.user.display_name}! Your invite was used by "
+                               "someone else, so we made a new one for you.")
+                        
                         await stored_interaction.followup.send(
                             view=InviteDialog(
-                                stored_interaction, target_guild, invite_msg,
+                                stored_interaction, member.guild, msg,
                                 new_invite.url, expires_timestamp
                             ),
                             ephemeral=True
                         )
-                        self.bot.logger.info(
-                            "Created replacement invite for User ID %s "
-                            "and sent followup notification",
-                            intended_user_id
-                        )
-                    except (discord.HTTPException, discord.NotFound) as e:
-                        # If followup fails, log it
-                        self.bot.logger.warning(
-                            "Created replacement invite for User ID %s "
-                            "but could not send followup: %s",
-                            intended_user_id, e
-                        )
-                else:
-                    self.bot.logger.error(
-                        "Failed to create replacement invite for User ID %s after impersonation",
-                        intended_user_id
-                    )
+                    except (discord.HTTPException, discord.NotFound):
+                        pass
             else:
-                # Correct user joined - log success
                 self.bot.logger.info(
                     "User %s (User ID: %s) successfully joined using their invite",
                     member, member.id
