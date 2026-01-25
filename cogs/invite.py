@@ -168,6 +168,7 @@ class Invite(commands.Cog):
 
         # Validate configuration
         if not TARGET_GUILD or not TARGET_CHANNEL:
+            self.bot.logger.error("TARGET_GUILD or TARGET_CHANNEL not configured.")
             await interaction.followup.send(
                 "Target server or channel is not configured. "
                 "Please contact a moderator.",
@@ -178,6 +179,7 @@ class Invite(commands.Cog):
         # Get the target guild
         target_guild = self.bot.get_guild(TARGET_GUILD)
         if not target_guild:
+            self.bot.logger.error("Could not find TARGET_GUILD: %s", TARGET_GUILD)
             await interaction.followup.send(
                 "I cannot find the target server. Make sure I'm added to it.",
                 ephemeral=True
@@ -195,6 +197,7 @@ class Invite(commands.Cog):
         # Get the specific channel to create the invite from
         invite_channel = target_guild.get_channel(TARGET_CHANNEL)
         if not invite_channel:
+            self.bot.logger.error("Could not find TARGET_CHANNEL: %s in guild %s", TARGET_CHANNEL, target_guild.id)
             await interaction.followup.send(
                 "I cannot find the configured channel in the target server.",
                 ephemeral=True
@@ -203,6 +206,7 @@ class Invite(commands.Cog):
 
         # Check if the bot has permission to create invites in this channel
         if not invite_channel.permissions_for(target_guild.me).create_instant_invite:
+            self.bot.logger.error("Missing create_instant_invite permission in channel %s", TARGET_CHANNEL)
             await interaction.followup.send(
                 "I don't have permission to create invites in the configured channel.",
                 ephemeral=True
@@ -237,6 +241,7 @@ class Invite(commands.Cog):
             )
 
         except discord.Forbidden:
+            self.bot.logger.error("Forbidden error while creating invite in %s", TARGET_CHANNEL)
             await interaction.followup.send(
                 "I don't have permission to create invites in the target server.",
                 ephemeral=True
@@ -304,12 +309,15 @@ class Invite(commands.Cog):
                     await member.kick(
                         reason=f"Unauthorized use of invite link intended for User ID {intended_user_id}"
                     )
+                except discord.Forbidden:
+                    self.bot.logger.error("Missing permissions to kick impersonator %s", member.id)
+                except discord.HTTPException as e:
+                    self.bot.logger.error("Failed to kick impersonator %s: %s", member.id, e)
 
                 # Create a new invite for the intended user since theirs was consumed
                 new_invite = await self._create_invite_for_user(
                     intended_user_id,
-                    f"Replacement invite for User ID {intended_user_id} "
-                    "after impersonation attempt",
+                    f"Replacement invite for User ID {intended_user_id} after impersonation",
                     stored_interaction
                 )
 
