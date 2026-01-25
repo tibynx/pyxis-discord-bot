@@ -70,3 +70,6 @@ Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
 ```sh
 https://discord.com/oauth2/authorize?client_id=<app-id>&permissions=32&integration_type=0&scope=bot+applications.commands
 ```
+
+> [!TIP]
+> * You can restrict the `/join` command to specific roles or channels in the "Integrations" tab in your server settings!.
