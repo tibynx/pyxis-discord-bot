@@ -22,7 +22,8 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 ## Setup and Configuration
 
 Create an application on the [Discord Developer Portal](https://discord.com/developers/applications), and copy the application ID and the bot token for later.
-In your Discord client, enable Developer Mode in User Settings > Advanced. Right-click on a server icon or channel and select "Copy ID" to get the IDs.
+Under the "Bot" tab, enable the "Server Members Intent" and "Presence Intent" options for the bot.
+In your Discord client, enable Developer Mode in User Settings > Advanced. This is needed for setup. Right-click on a server icon or channel and select "Copy ID" to get the IDs.
 
 ### Source
 
