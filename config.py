@@ -18,6 +18,6 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 SYNC_GUILD = _get_int('SYNC_GUILD')
 TARGET_GUILD = _get_int('TARGET_GUILD')  # Target server for invite links
 TARGET_CHANNEL = _get_int('TARGET_CHANNEL')  # Target channel for invite links
-INVITE_TIMEOUT = _get_int('INVITE_TIMEOUT', 600)  # Timeout for invites, default 10 minutes
+INVITE_TIMEOUT = _get_int('INVITE_TIMEOUT', 300)  # Timeout for invites, default 5 minutes
 ONLINE_MEMBER_INDICATOR = os.getenv('ONLINE_MEMBER_INDICATOR', '🟢 ')
 TOTAL_MEMBER_INDICATOR = os.getenv('TOTAL_MEMBER_INDICATOR', '⚪ ')
