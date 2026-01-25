@@ -1,5 +1,14 @@
 # 🧭 Pyxis
-Pyxis is a Discord bot to invite members and manage your server.
+
+Pyxis is a versatile Discord bot designed to streamline member invitations and enhance server security. It allows your server members to create one-time-use invite links that they can only use. It's perfect for creating a secure private server, ban appeals, or games. Additionally, it provides powerful management tools to lock down your server in case of raids or other security concerns.
+
+## Features
+
+- **Secure One-Time Invites**: Generates unique, one-time-use invite links for specific users.
+- **Impersonation Protection**: Automatically detects and kicks unauthorized users who attempt to join using someone else's invite link.
+- **Server Lockdown Mode**: Instantly pause invites and DMs between members to protect against raids.
+- **Bulk Invite Purging**: Quickly clear all active invites on the server with a single command.
+- **Configurable Timeout & Indicators**: Customize invite expiration times and status emojis.
 
 ## Commands
 
