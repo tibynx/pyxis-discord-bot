@@ -61,3 +61,12 @@ Then, you can run the bot using the `python main.py` command!
 | TOTAL_MEMBER_INDICATOR  | (Optional) The emoji used to indicate total members in the invite message.                    |
 
 The emoji format can be either a Unicode emoji (e.g., 👥) or a custom emoji in the format `<a:name:id>` (e.g., `<a:people:733395207222984794>`). The bot must be in the server where the custom emoji is from or added to the bot on the Discord Developer Portal to use it.
+
+## Usage
+
+After setting up, invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `<app-id>` with your bot's appication ID.
+Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
+
+```sh
+https://discord.com/oauth2/authorize?client_id=<app-id>&permissions=32&integration_type=0&scope=bot+applications.commands
+```
