@@ -69,7 +69,7 @@ After setting up, invite your bot to the servers using this premade link! It alr
 Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
 
 ```sh
-https://discord.com/oauth2/authorize?client_id=<app-id>&permissions=32&integration_type=0&scope=bot+applications.commands
+https://discord.com/oauth2/authorize?client_id=<app-id>&permissions=35&integration_type=0&scope=bot+applications.commands
 ```
 
 > [!TIP]
