@@ -51,21 +51,21 @@ Then, you can run the bot using the `python main.py` command!
 
 ### Environment Variables
 
-|        Variable         | Description                                                                                   |
-|:-----------------------:|-----------------------------------------------------------------------------------------------|
-|        BOT_TOKEN        | Your bot token. Do not share this with anyone!                                                |
-|       SYNC_GUILD        | The ID of the server where the `/join` command will be available.                             |
-|      TARGET_GUILD       | The ID of the server where the invites will be created.                                       |
-|     TARGET_CHANNEL      | The ID of the channel where the invites will be created. This has to be in the TARGET_GUILD.  |
-|     INVITE_TIMEOUT      | (Optional) The time in seconds before the invites expire. Default is 5 minutes (300 seconds). |
-| ONLINE_MEMBER_INDICATOR | (Optional) The emoji used to indicate online members in the invite message.                   |
-| TOTAL_MEMBER_INDICATOR  | (Optional) The emoji used to indicate total members in the invite message.                    |
+|        Variable         | Description                                                                                  |
+|:-----------------------:|----------------------------------------------------------------------------------------------|
+|        BOT_TOKEN        | Your bot token. Do not share this with anyone!                                               |
+|       SYNC_GUILD        | The ID of the server where the `/join` command will be available.                            |
+|      TARGET_GUILD       | The ID of the server where the invites will be created.                                      |
+|     TARGET_CHANNEL      | The ID of the channel where the invites will be created. This has to be in the TARGET_GUILD. |
+|     INVITE_TIMEOUT      | (Optional) The time in seconds before the invites expire. The default is 5 minutes.          |
+| ONLINE_MEMBER_INDICATOR | (Optional) The emoji used to indicate online members in the invite message.                  |
+| TOTAL_MEMBER_INDICATOR  | (Optional) The emoji used to indicate total members in the invite message.                   |
 
 The emoji format can be either a Unicode emoji (e.g., 👥) or a custom emoji in the format `<a:name:id>` (e.g., `<a:people:733395207222984794>`). The bot must be in the server where the custom emoji is from or added to the bot on the Discord Developer Portal to use it.
 
 ## Usage
 
-After setting up, invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `<app-id>` with your bot's appication ID.
+After setting up, invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `<app-id>` with your bot's application ID.
 Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
 
 ```sh
