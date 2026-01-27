@@ -264,7 +264,7 @@ class Invite(commands.Cog):
     )
     @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.default_permissions(manage_guild=True)
     async def enable_join_command(self, interaction: discord.Interaction) -> None:
         """Enable the /join command."""
         if self.join_enabled:
@@ -285,7 +285,7 @@ class Invite(commands.Cog):
     )
     @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.default_permissions(manage_guild=True)
     async def disable_join_command(self, interaction: discord.Interaction) -> None:
         """Disable the /join command."""
         if not self.join_enabled:
