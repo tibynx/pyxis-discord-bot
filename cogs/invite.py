@@ -159,11 +159,10 @@ class Invite(commands.Cog):
         # Defer response since invite creation might take a moment
         await interaction.response.defer(ephemeral=True)
 
-        # Check if join command is enabled
+        # Check if joining is enabled
         if not self.join_enabled:
             await interaction.followup.send(
-                "The /join command is currently disabled. "
-                "Please use regular invites or contact a moderator.",
+                "Joining the server is currently disabled.",
                 ephemeral=True
             )
             return
@@ -261,7 +260,7 @@ class Invite(commands.Cog):
 
     @app_commands.command(
         name="enablejoin",
-        description="Enable the /join command for all users"
+        description="Enable members to join the configured server with /join"
     )
     @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
@@ -276,13 +275,13 @@ class Invite(commands.Cog):
         else:
             self.join_enabled = True
             await interaction.response.send_message(
-                "The /join command has been enabled. Users can now use /join to get invites.",
+                "The /join command has been enabled.",
                 ephemeral=True
             )
 
     @app_commands.command(
         name="disablejoin",
-        description="Disable the /join command for all users"
+        description="Disable members to join the configured server with /join"
     )
     @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
@@ -297,7 +296,7 @@ class Invite(commands.Cog):
         else:
             self.join_enabled = False
             await interaction.response.send_message(
-                "The /join command has been disabled. Users will not be able to use /join.",
+                "The /join command has been disabled.",
                 ephemeral=True
             )
 
