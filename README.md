@@ -19,37 +19,30 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 | `/lockserver`   | Enables security actions. Disables server invites and DMs between members. |
 | `/unlockserver` | Disables security actions.                                                 |
 
-## Setup and Configuration
+## Setup
 
-Create an application on the [Discord Developer Portal](https://discord.com/developers/applications), and copy the application ID and the bot token for later.
-Under the "Bot" tab, enable the "Server Members Intent" and "Presence Intent" options for the bot.
-In your Discord client, enable Developer Mode in User Settings > Advanced. This is needed for setup. Right-click on a server icon or channel and select "Copy ID" to get the IDs.
+1. Clone the repository and install all required packages! Python 3.14 is recommended!
+    ```sh
+    git clone https://github.com/tibynx/pyxis.git
+    cd pyxis/
+    pip install -r requirements.txt
+    ```
+2. Create an application on the [Discord Developer Portal](https://discord.com/developers/applications)
+    - Click "New Application" and give it a name.
+    - Note down the Application ID for later.
+    - Go to the "Bot" tab and click "Add Bot".
+    - Under "TOKEN", click "Copy" to copy your bot token. (You might need to reset it to see it.)
+    - Enable the "Server Members Intent" and "Presence Intent" options.
+3. Enable developer mode in Discord to copy guild and channel IDs
+    - Go to User Settings > Advanced > Developer Mode and enable it.
+4. Copy `.env.example` to `.env` and configure your settings.
+    - See the configuration section below for details!
+    - On Discord, right-click on the server icon or channel and select "Copy ID" to get the IDs.
+    - **Do not share your `.env` file publicly!**
+5. Invite the bot to both Discord servers using the premade link in the usage section.
+6. Run `python main.py` to start the bot.
 
-### Source
-
-Clone the repo and install all required packages! Make sure you have at least Python 3.14 installed!
-
-```sh
-git clone https://github.com/tibynx/pyxis.git
-cd pyxis/
-pip install -r requirements.txt
-```
-
-In the meantime, create an `.env` file according to the `.env.example` file! Do not share your bot token with anyone!
-
-```sh
-BOT_TOKEN="your_bot_token_here"
-SYNC_GUILD="your_server_id_here"
-TARGET_GUILD="your_server_id_here"
-TARGET_CHANNEL="your_channel_id_here"
-INVITE_TIMEOUT="300" #optional
-ONLINE_MEMBER_INDICATOR="🟢" #optional
-TOTAL_MEMBER_INDICATOR="⚪" #optional
-```
-
-Then, you can run the bot using the `python main.py` command!
-
-### Environment Variables
+## Configuration
 
 |         Variable          | Description                                                                                    |
 |:-------------------------:|------------------------------------------------------------------------------------------------|
@@ -57,7 +50,7 @@ Then, you can run the bot using the `python main.py` command!
 |       `SYNC_GUILD`        | The ID of the server where the `/join` command will be available.                              |
 |      `TARGET_GUILD`       | The ID of the server where the invites will be created.                                        |
 |     `TARGET_CHANNEL`      | The ID of the channel where the invites will be created. This has to be in the `TARGET_GUILD`. |
-|     `INVITE_TIMEOUT`      | (Optional) The time in seconds before the invites expire. The default is 5 minutes.            |
+|     `INVITE_TIMEOUT`      | (Optional) The time in seconds before the invites expire. (Default: 5 minutes)                 |
 | `ONLINE_MEMBER_INDICATOR` | (Optional) The emoji used to indicate online members in the invite message.                    |
 | `TOTAL_MEMBER_INDICATOR`  | (Optional) The emoji used to indicate total members in the invite message.                     |
 
@@ -65,12 +58,12 @@ The emoji format can be either a Unicode emoji (e.g., 👥) or a custom emoji in
 
 ## Usage
 
-After setting up, invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `<app-id>` with your bot's application ID.
+Invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `YOUR_APP_ID` with your bot's Application ID.
 Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
 
-```sh
-https://discord.com/oauth2/authorize?client_id=<app-id>&permissions=35&integration_type=0&scope=bot+applications.commands
+```text
+https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&permissions=35&integration_type=0&scope=bot+applications.commands
 ```
 
 > [!TIP]
-> * You can restrict the `/join` command to specific roles or channels in the "Integrations" tab in your server settings!.
+> * You can restrict the `/join` command to specific roles or channels using the "Integrations" tab in your server settings!.
