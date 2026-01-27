@@ -5,7 +5,7 @@ from discord.ext import commands
 from discord import app_commands
 from config import (
     SYNC_GUILD, TARGET_GUILD, TARGET_CHANNEL, INVITE_TIMEOUT,
-    ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
+    COMMAND_DESCRIPTION, ONLINE_MEMBER_INDICATOR, TOTAL_MEMBER_INDICATOR
 )
 
 # Invite dialog
@@ -148,7 +148,7 @@ class Invite(commands.Cog):
 
     @app_commands.command(
         name="join",
-        description="Get an invite link to join the server"
+        description=COMMAND_DESCRIPTION # Set custom description
     )
     @app_commands.guild_only()
     @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))

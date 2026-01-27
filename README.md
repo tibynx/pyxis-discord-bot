@@ -50,6 +50,7 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 |       `SYNC_GUILD`        | The ID of the server where the `/join` command will be available.                              |
 |      `TARGET_GUILD`       | The ID of the server where the invites will be created.                                        |
 |     `TARGET_CHANNEL`      | The ID of the channel where the invites will be created. This has to be in the `TARGET_GUILD`. |
+|   `COMMAND_DESCRIPTION`   | (Optional) Custom description for the `/join` command.                                         |
 |     `INVITE_TIMEOUT`      | (Optional) The time in seconds before the invites expire. (Default: 5 minutes)                 |
 | `ONLINE_MEMBER_INDICATOR` | (Optional) The emoji used to indicate online members in the invite message.                    |
 | `TOTAL_MEMBER_INDICATOR`  | (Optional) The emoji used to indicate total members in the invite message.                     |
@@ -67,3 +68,4 @@ https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&permissions=35&integr
 
 > [!TIP]
 > * You can restrict the `/join` command to specific roles or channels using the "Integrations" tab in your server settings!.
+> * You can also change the description of the `/join` command using the `COMMAND_DESCRIPTION` variable.
