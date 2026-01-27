@@ -18,6 +18,8 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 | `/purgeinvites` | Deletes all server invites.                                                |
 | `/lockserver`   | Enables security actions. Disables server invites and DMs between members. |
 | `/unlockserver` | Disables security actions.                                                 |
+| `/enablejoin`   | Enables members to join the `TARGET_SERVER` via the `/join` command.       |
+| `/disablejoin`  | Disables members from joining the `TARGET_SERVER` via the `/join` command. |
 
 ## Setup
 

@@ -89,6 +89,8 @@ class Invite(commands.Cog):
         self.invite_to_user = {}
         # Lock for on_member_join to prevent race conditions
         self._join_lock = asyncio.Lock()
+        # Track if join command is enabled (default: enabled)
+        self.join_enabled = True
 
     async def _cleanup_invite(self, user_id: int, invite_code: str) -> None:
         """Clean up an invite after the timeout."""
@@ -156,6 +158,14 @@ class Invite(commands.Cog):
         """Generate a personal invite link to the target server."""
         # Defer response since invite creation might take a moment
         await interaction.response.defer(ephemeral=True)
+
+        # Check if joining is enabled
+        if not self.join_enabled:
+            await interaction.followup.send(
+                "Joining the server is currently disabled.",
+                ephemeral=True
+            )
+            return
 
         user_id = interaction.user.id
         # Spam prevention: Check if the user already has an active invite
@@ -245,6 +255,48 @@ class Invite(commands.Cog):
             self.bot.logger.error("Forbidden error while creating invite in %s", TARGET_CHANNEL)
             await interaction.followup.send(
                 "I don't have permission to create invites in the target server.",
+                ephemeral=True
+            )
+
+    @app_commands.command(
+        name="enablejoin",
+        description="Enable members to join the configured server with /join"
+    )
+    @app_commands.guild_only()
+    @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
+    @app_commands.default_permissions(manage_guild=True)
+    async def enable_join_command(self, interaction: discord.Interaction) -> None:
+        """Enable the /join command."""
+        if self.join_enabled:
+            await interaction.response.send_message(
+                "The /join command is already enabled.",
+                ephemeral=True
+            )
+        else:
+            self.join_enabled = True
+            await interaction.response.send_message(
+                "The /join command has been enabled.",
+                ephemeral=True
+            )
+
+    @app_commands.command(
+        name="disablejoin",
+        description="Disable members to join the configured server with /join"
+    )
+    @app_commands.guild_only()
+    @app_commands.guilds(*([discord.Object(id=SYNC_GUILD)] if SYNC_GUILD else []))
+    @app_commands.default_permissions(manage_guild=True)
+    async def disable_join_command(self, interaction: discord.Interaction) -> None:
+        """Disable the /join command."""
+        if not self.join_enabled:
+            await interaction.response.send_message(
+                "The /join command is already disabled.",
+                ephemeral=True
+            )
+        else:
+            self.join_enabled = False
+            await interaction.response.send_message(
+                "The /join command has been disabled.",
                 ephemeral=True
             )
 
