@@ -24,6 +24,8 @@ ARG VERSION
 LABEL org.opencontainers.image.authors="tibynx (https://github.com/tibynx)"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.title="Pyxis"
+LABEL org.opencontainers.image.description="A Discord bot to allow members to join servers with personal invites"
 LABEL org.opencontainers.image.source="https://github.com/tibynx/pyxis"
 LABEL org.opencontainers.image.url="https://github.com/tibynx/pyxis/packages"
 LABEL org.opencontainers.image.licenses="GPL-3.0"
