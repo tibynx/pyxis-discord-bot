@@ -23,26 +23,57 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 
 ## Setup
 
+### Prequisites
+
+1. Create an application on the [Discord Developer Portal](https://discord.com/developers/applications)
+    - Click "New Application" and give it a name.
+    - Note down the Application ID for later.
+    - Go to the "Bot" tab and click "Add Bot".
+    - Under "TOKEN", click "Copy" to copy your bot token. (You might need to reset it to see it.)
+    - Enable the "Server Members Intent" and "Presence Intent" options.
+2. Enable developer mode in Discord to copy guild and channel IDs
+    - Go to User Settings > Advanced > Developer Mode and enable it.
+3. Invite the bot to two Discord servers. One where you want your members to join from, and one where they gonna join to. You can use the premade link in the usage section.
+
+Now choose one of the following methods to run the bot!
+
+### Source
+
 1. Clone the repository and install all required packages! Python 3.14 is recommended!
     ```sh
     git clone https://github.com/tibynx/pyxis.git
     cd pyxis/
     pip install -r requirements.txt
     ```
-2. Create an application on the [Discord Developer Portal](https://discord.com/developers/applications)
-    - Click "New Application" and give it a name.
-    - Note down the Application ID for later.
-    - Go to the "Bot" tab and click "Add Bot".
-    - Under "TOKEN", click "Copy" to copy your bot token. (You might need to reset it to see it.)
-    - Enable the "Server Members Intent" and "Presence Intent" options.
-3. Enable developer mode in Discord to copy guild and channel IDs
-    - Go to User Settings > Advanced > Developer Mode and enable it.
-4. Copy `.env.example` to `.env` and configure your settings.
+2. Copy `.env.example` to `.env` and configure your settings.
     - See the configuration section below for details!
     - On Discord, right-click on the server icon or channel and select "Copy ID" to get the IDs.
     - **Do not share your `.env` file publicly!**
-5. Invite the bot to both Discord servers using the premade link in the usage section.
-6. Run `python main.py` to start the bot.
+3. Run `python main.py` to start the bot.
+
+### Docker
+
+1. Pull the latest image from Docker Hub
+    ```sh
+    docker pull tibynx/pyxis:latest
+    ```
+2. Run the container with the required environment variables and volume mounts
+    * See the configuration section below for details!
+    * Change `/path/to/logs` to a directory on your host where you want to store the logs.
+    ```sh
+    docker run -d \
+    --name=pyxis \
+    -e BOT_TOKEN="your_bot_token_here" \
+    -e SYNC_GUILD="your_server_id_here" \
+    -e TARGET_GUILD="your_server_id_here" \
+    -e TARGET_CHANNEL="your_channel_id_here" \
+    -e COMMAND_DESCRIPTION="Get an invite link to join the server" #optional \
+    -e INVITE_TIMEOUT="300" #optional \
+    -e ONLINE_MEMBER_INDICATOR="🟢" #optional \
+    -e TOTAL_MEMBER_INDICATOR="⚪" #optional \
+    -v /path/to/logs:/app/logs \
+    tibynx/pyxis:latest
+    ```
 
 ## Configuration
 
