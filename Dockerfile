@@ -28,7 +28,7 @@ LABEL org.opencontainers.image.title="Pyxis"
 LABEL org.opencontainers.image.description="A Discord bot to allow members to join servers with personal invites"
 LABEL org.opencontainers.image.source="https://github.com/tibynx/pyxis"
 LABEL org.opencontainers.image.url="https://github.com/tibynx/pyxis/packages"
-LABEL org.opencontainers.image.licenses="GPL-3.0"
+LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.base.name="python:3.14-alpine"
 LABEL org.opencontainers.image.base.documentation="https://hub.docker.com/_/python"
 
