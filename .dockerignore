@@ -87,6 +87,7 @@ http-client.private.env.json
 
 # Environments
 .env
+.env.example
 .venv
 env/
 venv/
@@ -94,12 +95,40 @@ ENV/
 env.bak/
 venv.bak/
 
-# Python cache
+# Python cache & build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+build/
+dist/
+wheels/
+*.egg
 
-# Project specific
-.github/
+# Testing, typing & linting caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Logs & local databases
 logs/
-.env.example
+*.log
+*.sqlite3
+*.db
+
+# Project documentation & repo metadata
+README.md
+.github/
