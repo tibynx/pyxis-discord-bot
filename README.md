@@ -1,25 +1,15 @@
 # 🧭 Pyxis
 
-Pyxis is a versatile Discord bot designed to streamline member invitations and enhance server security. It allows your server members to create one-time-use invite links that they can only use. It's perfect for creating a secure private server, ban appeals, or games. Additionally, it provides powerful management tools to lock down your server in case of raids or other security concerns.
+Pyxis is a versatile Discord bot designed to streamline member invitations and enhance server security.
+
+It allows your server members to create one-time-use invite links that they can only use. It's perfect for creating a secure private server, ban appeals, or games. Additionally, it provides powerful management tools to lock down your server in case of raids or other security concerns.
 
 ## Features
 
-- **Secure One-Time Invites**: Generates unique, one-time-use invite links for specific users.
-- **Impersonation Protection**: Automatically detects and kicks unauthorized users who attempt to join using someone else's invite link.
-- **Server Lockdown Mode**: Instantly pause invites and DMs between members to protect against raids.
-- **Bulk Invite Purging**: Quickly clear all active invites on the server with a single command.
-- **Configurable Timeout & Indicators**: Customize invite expiration times and status emojis.
-
-## Commands
-
-| Command         | Description                                                                |
-|-----------------|----------------------------------------------------------------------------|
-| `/join`         | Generates an invite link for the configured server.                        |
-| `/purgeinvites` | Deletes all server invites.                                                |
-| `/lockserver`   | Enables security actions. Disables server invites and DMs between members. |
-| `/unlockserver` | Disables security actions.                                                 |
-| `/enablejoin`   | Enables members to join the `TARGET_SERVER` via the `/join` command.       |
-| `/disablejoin`  | Disables members from joining the `TARGET_SERVER` via the `/join` command. |
+- Generate unique, one-time-use invite links for specific users.
+- Automatically detects and kicks unauthorized users who attempt to join using someone else's invite link.
+- Instantly pause invites and DMs between members to protect against raids.
+- Quickly clear all active invites on the server with a single command.
 
 ## Setup
 
@@ -37,20 +27,6 @@ Pyxis is a versatile Discord bot designed to streamline member invitations and e
 
 Now choose one of the following methods to run the bot!
 
-### Source
-
-1. Clone the repository and install all required packages! Python 3.14 is recommended!
-    ```sh
-    git clone https://github.com/tibynx/pyxis.git
-    cd pyxis/
-    pip install -r requirements.txt
-    ```
-2. Copy `.env.example` to `.env` and configure your settings.
-    - See the configuration section below for details!
-    - On Discord, right-click on the server icon or channel and select "Copy ID" to get the IDs.
-    - **Do not share your `.env` file publicly!**
-3. Run `python main.py` to start the bot.
-
 ### Docker
 
 1. Pull the latest image from Docker Hub
@@ -58,22 +34,41 @@ Now choose one of the following methods to run the bot!
     docker pull tibynx/pyxis:latest
     ```
 2. Run the container with the required environment variables and volume mounts
-    * See the configuration section below for details!
-    * Change `/path/to/logs` to a directory on your host where you want to store the logs.
+    - See the configuration section below for details! Only required options are included in this example.
+    - On Discord, right-click on the server icon or channel and select "Copy ID" to get their IDs.
+    - Change `/path/to/logs` to a directory on your host where you want to store the logs.
     ```sh
     docker run -d \
-    --name=pyxis \
-    -e BOT_TOKEN="your_bot_token_here" \
-    -e SYNC_GUILD="your_server_id_here" \
-    -e TARGET_GUILD="your_server_id_here" \
-    -e TARGET_CHANNEL="your_channel_id_here" \
-    -e COMMAND_DESCRIPTION="Get an invite link to join the server" #optional \
-    -e INVITE_TIMEOUT="300" #optional \
-    -e ONLINE_MEMBER_INDICATOR="🟢" #optional \
-    -e TOTAL_MEMBER_INDICATOR="⚪" #optional \
-    -v /path/to/logs:/app/logs \
-    tibynx/pyxis:latest
+        --name=pyxis \
+        -e BOT_TOKEN="your_bot_token_here" \
+        -e SYNC_GUILD="your_server_id_here" \
+        -e TARGET_GUILD="your_server_id_here" \
+        -e TARGET_CHANNEL="your_channel_id_here" \
+        -v /path/to/logs:/app/logs \
+        tibynx/pyxis:latest
     ```
+
+### Source
+
+1. Install **[Python 3.14 or newer](https://www.python.org/downloads/)**
+2. Clone the repository and install all required packages!
+    ```sh
+    git clone https://github.com/tibynx/pyxis.git
+    cd pyxis
+    ```
+    ```sh
+    pip install -r requirements.txt
+    ```
+3. Copy `.env.example` to `.env` and configure your settings.
+    - See the configuration section below for details!
+    - On Discord, right-click on the server icon or channel and select "Copy ID" to get their IDs.
+    - **Do not share your `.env` file publicly!**
+4. Invite the bot to a Discord server
+   - You can use the premade link in the usage section.
+5. Start the bot
+   ```sh
+   python main.py
+   ```
 
 ## Configuration
 
@@ -88,17 +83,34 @@ Now choose one of the following methods to run the bot!
 | `ONLINE_MEMBER_INDICATOR` | (Optional) The emoji used to indicate online members in the invite message.                    |
 | `TOTAL_MEMBER_INDICATOR`  | (Optional) The emoji used to indicate total members in the invite message.                     |
 
-The emoji format can be either a Unicode emoji (e.g., 👥) or a custom emoji in the format `<a:name:id>` (e.g., `<a:people:733395207222984794>`). The bot must be in the server where the custom emoji is from or added to the bot on the Discord Developer Portal to use it.
+### Set custom description for /join
+
+Using the `COMMAND_DESCRIPTION` variable, you can set a custom description for the `/join` command that can be seen by users in Discord. The description can be between **1 and 100** characters long.
 
 ## Usage
 
+### Invite
+
 Invite your bot to the servers using this premade link! It already contains the proper permissions. Replace `YOUR_APP_ID` with your bot's Application ID.
-Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!
+**Make sure to invite the bot to both the `SYNC_GUILD` and `TARGET_GUILD` servers!**
 
 ```text
 https://discord.com/oauth2/authorize?client_id=YOUR_APP_ID&permissions=35&integration_type=0&scope=bot+applications.commands
 ```
 
+### Commands
+
+| Command         | Description                                                                |
+|-----------------|----------------------------------------------------------------------------|
+| `/join`         | Generates an invite link for the configured server.                        |
+| `/purgeinvites` | Deletes all server invites.                                                |
+| `/lockserver`   | Enables security actions. Disables server invites and DMs between members. |
+| `/unlockserver` | Disables security actions.                                                 |
+| `/enablejoin`   | Enables members to join the `TARGET_SERVER` via the `/join` command.       |
+| `/disablejoin`  | Disables members from joining the `TARGET_SERVER` via the `/join` command. |
+
+> [!NOTE]
+> `/lockserver`, `/unlockserver`, and `/purgeinvites` operate on whichever server they are executed in.
+
 > [!TIP]
-> * You can restrict the `/join` command to specific roles or channels using the "Integrations" tab in your server settings!.
-> * You can also change the description of the `/join` command using the `COMMAND_DESCRIPTION` variable.
+> * You can restrict the `/join` command to specific roles or channels using the "Integrations" tab in your server settings!
